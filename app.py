@@ -102,10 +102,28 @@ with tab_validate:
             colors = {'pass': 'color:#42f5b3', 'warn': 'color:#f5a742', 'fail': 'color:#f54260'}
             return colors.get(val, '')
 
-        styled = df_checks[['odt', 'group', 'widget', 'rule', 'csv', 'json', 'status', 'detail']].style.map(
-            _style_status, subset=['status']
+        display_cols = ['odt', 'group', 'widget', 'rule', 'csv', 'json', 'status']
+        styled = df_checks[display_cols].style.map(_style_status, subset=['status'])
+        event = st.dataframe(
+            styled,
+            use_container_width=True,
+            hide_index=True,
+            on_select='rerun',
+            selection_mode='single-row',
         )
-        st.dataframe(styled, use_container_width=True, hide_index=True)
+
+        selected_rows = event.selection.get('rows', [])
+        if selected_rows:
+            idx = selected_rows[0]
+            row = df_checks.iloc[idx]
+            items = row['detail'] or []
+            if items:
+                st.divider()
+                st.markdown(f"**{row['group']}** / *{row['rule']}*")
+                if len(items) == 1:
+                    st.markdown(items[0])
+                else:
+                    st.markdown('\n'.join(f'- {item}' for item in items))
 
         # Excel download
         with st.spinner('Preparando Excel…'):
