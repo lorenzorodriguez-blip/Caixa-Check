@@ -13,6 +13,9 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Superpowers brainstorm sessions
+.superpowers/
+
 # Test data (no subir datos reales de clientes)
 data/
 *.csv
