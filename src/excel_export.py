@@ -49,7 +49,7 @@ def build_excel(df_csv, json_data: dict) -> bytes:
 
     for c in all_checks:
         row_data = [c['odt'], c['group'], c['widget'], c['rule'],
-                    c['csv'], c['json'], c['status'].upper(), c['detail'],
+                    c['csv'], c['json'], c['status'].upper(), '\n'.join(c['detail']),
                     c.get('page_title', ''), c.get('widget_id', '')]
         ws1.append(row_data)
         rn = ws1.max_row
