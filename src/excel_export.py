@@ -11,11 +11,6 @@ from .constants import MD_COLUMNS
 from .market_data import build_market_data_sheets
 
 
-_STATUS_FILL = {
-    'pass': PatternFill(fill_type='solid', fgColor='FF1a3a2a'),
-    'warn': PatternFill(fill_type='solid', fgColor='FF3a2a10'),
-    'fail': PatternFill(fill_type='solid', fgColor='FF3a1018'),
-}
 _STATUS_FONT = {
     'pass': Font(color='FF42f5b3', bold=True),
     'warn': Font(color='FFf5a742', bold=True),
@@ -49,15 +44,11 @@ def build_excel(df_csv, json_data: dict) -> bytes:
 
     for c in all_checks:
         row_data = [c['odt'], c['group'], c['widget'], c['rule'],
-                    c['csv'], c['json'], c['status'].upper(), c['detail'],
+                    c['csv'], c['json'], c['status'].upper(), '\n'.join(c['detail']),
                     c.get('page_title', ''), c.get('widget_id', '')]
         ws1.append(row_data)
         rn = ws1.max_row
-        status_key = c['status']
-        for col in range(1, len(row_data) + 1):
-            cell = ws1.cell(row=rn, column=col)
-            cell.fill = _STATUS_FILL.get(status_key, PatternFill())
-        ws1.cell(row=rn, column=7).font = _STATUS_FONT.get(status_key, Font())
+        ws1.cell(row=rn, column=7).font = _STATUS_FONT.get(c['status'], Font())
 
     _autofit(ws1, [8, 30, 35, 45, 16, 16, 8, 20, 35, 18])
 

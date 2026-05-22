@@ -9,6 +9,7 @@ from src.checks import run_checks
 from src.diff import run_diff
 from src.excel_export import build_excel
 from src.parser import parse_csv
+from src.repository import add_client, get_previous_report, list_all_reports, load_clients, save_report
 
 st.set_page_config(
     page_title='Caixa Check',
@@ -18,7 +19,36 @@ st.set_page_config(
 
 st.title('Caixa Check')
 
-tab_validate, tab_diff = st.tabs(['Validación', 'Comparar periodos'])
+
+def _render_diff_summary(diffs: list, date_a: str, date_b: str) -> None:
+    big = [d for d in diffs if d['sev'] == 'big']
+    med = [d for d in diffs if d['sev'] == 'medium']
+    sml = [d for d in diffs if d['sev'] == 'small']
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric('Total métricas', len(diffs))
+    m2.metric('Cambios >20%', len(big))
+    m3.metric('Cambios 5-20%', len(med))
+    m4.metric('Cambios <5%', len(sml))
+
+    def _table(items, label):
+        if not items:
+            return
+        st.subheader(label)
+        st.dataframe(pd.DataFrame([{
+            'Métrica':   d['label'],
+            date_a:      d['val_a'],
+            date_b:      d['val_b'],
+            'Variación': d['val_b'] - d['val_a'],
+            '%':         f"{d['pct_diff']:+.1f}%" if d['pct_diff'] is not None else '—',
+        } for d in items]), use_container_width=True, hide_index=True)
+
+    _table(big, '⚠ Cambios significativos (>20%)')
+    _table(med, 'Cambios moderados (5–20%)')
+    _table(sml, 'Cambios menores (<5%)')
+
+
+tab_validate, tab_diff, tab_repo = st.tabs(['Validación', 'Comparar periodos', 'Repositorio'])
 
 # ── Tab 1: Validación ────────────────────────────────────────────────────────
 with tab_validate:
@@ -72,10 +102,28 @@ with tab_validate:
             colors = {'pass': 'color:#42f5b3', 'warn': 'color:#f5a742', 'fail': 'color:#f54260'}
             return colors.get(val, '')
 
-        styled = df_checks[['odt', 'group', 'widget', 'rule', 'csv', 'json', 'status', 'detail']].style.map(
-            _style_status, subset=['status']
+        display_cols = ['odt', 'group', 'widget', 'rule', 'csv', 'json', 'status']
+        styled = df_checks[display_cols].style.map(_style_status, subset=['status'])
+        event = st.dataframe(
+            styled,
+            use_container_width=True,
+            hide_index=True,
+            on_select='rerun',
+            selection_mode='single-row',
         )
-        st.dataframe(styled, use_container_width=True, hide_index=True)
+
+        selected_rows = event.selection.get('rows', [])
+        if selected_rows:
+            idx = selected_rows[0]
+            row = df_checks.iloc[idx]
+            items = row['detail'] or []
+            if items:
+                st.divider()
+                st.markdown(f"**{row['group']}** / *{row['rule']}*")
+                if len(items) == 1:
+                    st.markdown(items[0])
+                else:
+                    st.markdown('\n'.join(f'- {item}' for item in items))
 
         # Excel download
         with st.spinner('Preparando Excel…'):
@@ -114,30 +162,63 @@ with tab_diff:
         diffs = st.session_state['diffs']
         date_a = diffs[0]['date_a'] if diffs else 'Periodo A'
         date_b = diffs[0]['date_b'] if diffs else 'Periodo B'
+        _render_diff_summary(diffs, date_a, date_b)
 
-        big  = [d for d in diffs if d['sev'] == 'big']
-        med  = [d for d in diffs if d['sev'] == 'medium']
-        sml  = [d for d in diffs if d['sev'] == 'small']
+# ── Tab 3: Repositorio ───────────────────────────────────────────────────────
+with tab_repo:
+    # Añadir nuevo cliente
+    with st.expander('+ Añadir nuevo cliente'):
+        new_client_id = st.text_input('ID del cliente (UUID)', key='new_client_id')
+        if st.button('Añadir cliente', key='btn_add_client'):
+            if new_client_id.strip():
+                added = add_client(new_client_id.strip())
+                if added:
+                    st.success(f'Cliente añadido: {new_client_id.strip()}')
+                    st.rerun()
+                else:
+                    st.warning('Ese cliente ya existe.')
+            else:
+                st.error('Introduce un ID válido.')
 
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric('Total métricas', len(diffs))
-        m2.metric('Cambios >20%', len(big))
-        m3.metric('Cambios 5-20%', len(med))
-        m4.metric('Cambios <5%', len(sml))
+    st.subheader('Guardar reporte')
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        repo_json_file = st.file_uploader('JSON del reporte', type=['json'], key='repo_json')
+    with col2:
+        repo_client = st.selectbox('Cliente', load_clients(), key='repo_client')
+    with col3:
+        repo_date = st.date_input('Fecha del reporte', value=date.today(), key='repo_date')
 
-        def _render_diff_table(items, label):
-            if not items:
-                return
-            st.subheader(label)
-            df_d = pd.DataFrame([{
-                'Métrica':    d['label'],
-                date_a:       d['val_a'],
-                date_b:       d['val_b'],
-                'Variación':  d['val_b'] - d['val_a'],
-                '%':          f"{d['pct_diff']:+.1f}%" if d['pct_diff'] is not None else '—',
-            } for d in items])
-            st.dataframe(df_d, use_container_width=True, hide_index=True)
+    save_clicked = st.button('💾 Guardar reporte', disabled=not repo_json_file, type='primary')
 
-        _render_diff_table(big, '⚠ Cambios significativos (>20%)')
-        _render_diff_table(med, 'Cambios moderados (5–20%)')
-        _render_diff_table(sml, 'Cambios menores (<5%)')
+    if save_clicked and repo_json_file:
+        try:
+            repo_json_data = json.loads(repo_json_file.read().decode('utf-8'))
+            save_report(repo_client, repo_date, repo_json_data)
+            st.success(f'Reporte guardado — {repo_client} / {repo_date}')
+
+            prev = get_previous_report(repo_client, repo_date)
+            if prev:
+                prev_date, prev_data = prev
+                repo_diffs = run_diff(prev_data, repo_json_data)
+                st.session_state['repo_diffs'] = repo_diffs
+                st.session_state['repo_diff_dates'] = (str(prev_date), str(repo_date))
+            else:
+                st.session_state.pop('repo_diffs', None)
+                st.info('No hay reporte anterior guardado para este cliente. La comparación estará disponible la próxima semana.')
+        except Exception as e:
+            st.error(f'Error al guardar: {e}')
+
+    if 'repo_diffs' in st.session_state:
+        date_a, date_b = st.session_state['repo_diff_dates']
+        st.divider()
+        st.subheader(f'Comparación: {date_a} vs {date_b}')
+        _render_diff_summary(st.session_state['repo_diffs'], date_a, date_b)
+
+    st.divider()
+    st.subheader('Historial de reportes')
+    all_reports = list_all_reports()
+    if all_reports:
+        st.dataframe(pd.DataFrame(all_reports), use_container_width=True, hide_index=True)
+    else:
+        st.info('No hay reportes guardados aún.')

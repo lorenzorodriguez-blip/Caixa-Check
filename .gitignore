@@ -13,6 +13,13 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Superpowers brainstorm sessions
+.superpowers/
+docs/superpowers/
+
+# Claude Code project settings
+.claude/
+
 # Test data (no subir datos reales de clientes)
 data/
 *.csv
