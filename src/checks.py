@@ -24,31 +24,31 @@ def chk(odt, group, widget, rule, csv_val, json_val, mode='abs', page_title='', 
         d = abs(json_val - 1)
         status = 'pass' if d < PCT_TOL else 'warn' if d < 0.02 else 'fail'
         csv_str, json_str = '100,00%', fmt_p(json_val)
-        detail = '' if d < PCT_TOL else f'Δ {d * 100:.2f}pp'
+        detail = [] if d < PCT_TOL else [f'Δ {d * 100:.2f}pp']
 
     elif mode == 'no_negative':
         status = 'pass' if json_val >= 0 else 'fail'
         csv_str, json_str = '≥ 0', fmt(json_val)
-        detail = f'Negativo: {fmt(json_val)}' if json_val < 0 else ''
+        detail = [f'Negativo: {fmt(json_val)}'] if json_val < 0 else []
 
     elif mode == 'match_pct':
         d = abs(csv_val - json_val)
         status = 'pass' if d < PCT_TOL else 'warn' if d < 0.02 else 'fail'
         csv_str, json_str = fmt_p(csv_val), fmt_p(json_val)
-        detail = '' if d < 0.001 else f'Δ {d * 100:.2f}pp'
+        detail = [] if d < 0.001 else [f'Δ {d * 100:.2f}pp']
 
     elif mode == 'match_value':
         d = abs(csv_val - json_val)
         tol = max(TOL, abs(csv_val) * 0.02)
         status = 'pass' if d <= tol else 'warn' if d <= abs(csv_val) * 0.05 else 'fail'
         csv_str, json_str = fmt(csv_val), fmt(json_val)
-        detail = '' if d < 0.5 else f'Δ {fmt(d)}'
+        detail = [] if d < 0.5 else [f'Δ {fmt(d)}']
 
     else:  # abs
         d = abs(csv_val - json_val)
         status = 'pass' if d <= TOL else 'warn' if d <= abs(csv_val or 1) * 0.02 else 'fail'
         csv_str, json_str = fmt(csv_val), fmt(json_val)
-        detail = '' if d < 0.5 else f'Δ {fmt(d)}'
+        detail = [] if d < 0.5 else [f'Δ {fmt(d)}']
 
     return {
         'odt': odt, 'group': group, 'widget': widget, 'rule': rule,
@@ -80,7 +80,7 @@ def run_checks(calcs: dict, jx: dict) -> list:
 
     # ── CSV quality checks ──────────────────────────────────────────────────
     if len(calcs['unclassified']) > 0:
-        detail = ' || '.join(fmt_row(r) for r in calcs['unclassified'].to_dict('records'))
+        detail = [fmt_row(r) for r in calcs['unclassified'].to_dict('records')]
         checks.append({'odt': 'CSV', 'group': 'CSV — Calidad datos',
                         'widget': 'Activos sin asset_class ni sub_asset_class',
                         'rule': 'MV > 0 pero faltan ambas clasificaciones',
@@ -91,10 +91,10 @@ def run_checks(calcs: dict, jx: dict) -> list:
                         'widget': 'Activos sin asset_class ni sub_asset_class',
                         'rule': 'MV > 0 pero faltan ambas clasificaciones',
                         'csv': '0 activos', 'json': '0 activos',
-                        'status': 'pass', 'detail': '', 'page_title': '', 'widget_id': ''})
+                        'status': 'pass', 'detail': [], 'page_title': '', 'widget_id': ''})
 
     if len(calcs['missing_ac']) > 0:
-        detail = ' || '.join(fmt_row(r) for r in calcs['missing_ac'].to_dict('records'))
+        detail = [fmt_row(r) for r in calcs['missing_ac'].to_dict('records')]
         checks.append({'odt': 'CSV', 'group': 'CSV — Calidad datos',
                         'widget': 'Activos sin asset_class_group',
                         'rule': 'MV > 0, tiene sub_asset_class pero falta asset_class_group',
@@ -102,7 +102,7 @@ def run_checks(calcs: dict, jx: dict) -> list:
                         'status': 'warn', 'detail': detail, 'page_title': '', 'widget_id': ''})
 
     if len(calcs['missing_sac']) > 0:
-        detail = ' || '.join(fmt_row(r) for r in calcs['missing_sac'].to_dict('records'))
+        detail = [fmt_row(r) for r in calcs['missing_sac'].to_dict('records')]
         checks.append({'odt': 'CSV', 'group': 'CSV — Calidad datos',
                         'widget': 'Activos sin sub_asset_class',
                         'rule': 'MV > 0, tiene asset_class_group pero falta sub_asset_class',
