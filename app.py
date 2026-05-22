@@ -9,7 +9,7 @@ from src.checks import run_checks
 from src.diff import run_diff
 from src.excel_export import build_excel
 from src.parser import parse_csv
-from src.repository import add_client, get_previous_report, list_all_reports, load_clients, save_report
+from src.repository import add_client, get_previous_report, list_all_reports, load_clients, load_report, list_reports, save_report
 
 st.set_page_config(
     page_title='Caixa Check',
@@ -138,30 +138,80 @@ with tab_validate:
 
 # ── Tab 2: Comparar periodos ─────────────────────────────────────────────────
 with tab_diff:
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.markdown('**Periodo A — Anterior**')
-        json_a_file = st.file_uploader('JSON Anterior', type=['json'], key='json_a')
-    with col_b:
-        st.markdown('**Periodo B — Actual**')
-        json_b_file = st.file_uploader('JSON Actual', type=['json'], key='json_b')
+    subtab_repo, subtab_upload = st.tabs(['📁 Desde repositorio', '⬆ Subir archivos'])
 
-    diff_disabled = not (json_a_file and json_b_file)
-    diff_clicked = st.button('▶ Comparar periodos', disabled=diff_disabled, type='primary')
+    with subtab_repo:
+        rd_col1, rd_col2, rd_col3 = st.columns(3)
+        with rd_col1:
+            diff_client = st.selectbox('Cliente', load_clients(), key='diff_client')
+        dates = list_reports(diff_client)
+        with rd_col3:
+            if len(dates) >= 1:
+                diff_date_b = st.selectbox(
+                    'Periodo B — Actual',
+                    options=list(reversed(dates)),
+                    key='diff_date_b',
+                )
+            else:
+                diff_date_b = None
+                st.caption('Sin reportes guardados')
+        with rd_col2:
+            dates_a = [d for d in dates if diff_date_b and d < diff_date_b]
+            if dates_a:
+                diff_date_a = st.selectbox(
+                    'Periodo A — Anterior',
+                    options=list(reversed(dates_a)),
+                    key='diff_date_a',
+                )
+            else:
+                diff_date_a = None
+                st.caption('Sin periodos anteriores disponibles')
 
-    if diff_clicked:
-        try:
-            j_a = json.loads(json_a_file.read().decode('utf-8'))
-            j_b = json.loads(json_b_file.read().decode('utf-8'))
-            diffs = run_diff(j_a, j_b)
-            st.session_state['diffs'] = diffs
-        except Exception as e:
-            st.error(f'Error al comparar: {e}')
+        repo_diff_ok = diff_date_a is not None and diff_date_b is not None
+        if st.button('▶ Comparar periodos', disabled=not repo_diff_ok,
+                     type='primary', key='btn_repo_diff'):
+            try:
+                j_a = load_report(diff_client, diff_date_a)
+                j_b = load_report(diff_client, diff_date_b)
+                if j_a is None or j_b is None:
+                    st.error('No se pudo cargar uno de los reportes del repositorio.')
+                else:
+                    diffs = run_diff(j_a, j_b)
+                    st.session_state['diffs'] = diffs
+                    st.session_state['diff_dates'] = (str(diff_date_a), str(diff_date_b))
+            except Exception as e:
+                st.error(f'Error al comparar: {e}')
+
+    with subtab_upload:
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.markdown('**Periodo A — Anterior**')
+            json_a_file = st.file_uploader('JSON Anterior', type=['json'], key='json_a')
+        with col_b:
+            st.markdown('**Periodo B — Actual**')
+            json_b_file = st.file_uploader('JSON Actual', type=['json'], key='json_b')
+
+        diff_disabled = not (json_a_file and json_b_file)
+        diff_clicked = st.button('▶ Comparar periodos', disabled=diff_disabled,
+                                 type='primary', key='btn_upload_diff')
+
+        if diff_clicked:
+            try:
+                j_a = json.loads(json_a_file.read().decode('utf-8'))
+                j_b = json.loads(json_b_file.read().decode('utf-8'))
+                diffs = run_diff(j_a, j_b)
+                st.session_state['diffs'] = diffs
+                st.session_state.pop('diff_dates', None)
+            except Exception as e:
+                st.error(f'Error al comparar: {e}')
 
     if 'diffs' in st.session_state:
         diffs = st.session_state['diffs']
-        date_a = diffs[0]['date_a'] if diffs else 'Periodo A'
-        date_b = diffs[0]['date_b'] if diffs else 'Periodo B'
+        if 'diff_dates' in st.session_state:
+            date_a, date_b = st.session_state['diff_dates']
+        else:
+            date_a = diffs[0]['date_a'] if diffs else 'Periodo A'
+            date_b = diffs[0]['date_b'] if diffs else 'Periodo B'
         _render_diff_summary(diffs, date_a, date_b)
 
 # ── Tab 3: Repositorio ───────────────────────────────────────────────────────
