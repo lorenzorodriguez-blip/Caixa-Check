@@ -52,13 +52,20 @@ tab_validate, tab_diff, tab_repo = st.tabs(['Validación', 'Comparar periodos', 
 
 # ── Tab 1: Validación ────────────────────────────────────────────────────────
 with tab_validate:
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         csv_file = st.file_uploader('📊 1. CSV Input', type=['csv'], key='csv')
     with col2:
         json_file = st.file_uploader('{ } 2. JSON', type=['json'], key='json')
     with col3:
         st.info('📄 3. PDF — próximamente')
+    with col4:
+        val_client = st.selectbox(
+            '👤 Cliente (opcional)',
+            ['— ninguno —'] + load_clients(),
+            key='val_client',
+        )
+        st.caption('Para comparar con periodo anterior')
 
     run_disabled = not (csv_file and json_file)
     run_clicked = st.button('▶ Ejecutar validación', disabled=run_disabled, type='primary')
@@ -124,6 +131,23 @@ with tab_validate:
                     st.markdown(items[0])
                 else:
                     st.markdown('\n'.join(f'- {item}' for item in items))
+
+        # ── Comparación con periodo anterior ────────────────────────────────
+        if val_client != '— ninguno —':
+            prev = get_previous_report(val_client, date.today())
+            if prev:
+                prev_date, prev_data = prev
+                st.divider()
+                st.subheader('Comparar con periodo anterior')
+                st.caption(f'Periodo anterior encontrado: {prev_date}')
+                if st.button('▶ Comparar', key='btn_val_diff', type='primary'):
+                    val_diffs = run_diff(prev_data, st.session_state['json_data'])
+                    st.session_state['val_diffs'] = val_diffs
+                    st.session_state['val_diff_dates'] = (str(prev_date), str(date.today()))
+
+        if 'val_diffs' in st.session_state:
+            date_a, date_b = st.session_state['val_diff_dates']
+            _render_diff_summary(st.session_state['val_diffs'], date_a, date_b)
 
         # Excel download
         with st.spinner('Preparando Excel…'):
