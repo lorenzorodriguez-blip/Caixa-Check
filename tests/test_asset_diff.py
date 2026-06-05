@@ -127,3 +127,17 @@ def test_run_asset_diff_sorted_big_first():
     b = _json([_row('A', 'LU0001', 102000.0), _row('B', 'LU0002', 130000.0)])
     diffs = run_asset_diff(a, b)
     assert diffs[0]['isin'] == 'LU0002'  # big change first
+
+
+def test_run_asset_diff_removed_abs_diff_positive():
+    a = _json([_row('Fondo A', 'LU0001', 100000.0)])
+    b = _json([])
+    diffs = run_asset_diff(a, b)
+    assert diffs[0]['abs_diff'] >= 0
+
+
+def test_run_asset_diff_changed_from_zero_is_big():
+    a = _json([_row('Fondo A', 'LU0001', 0.0)])
+    b = _json([_row('Fondo A', 'LU0001', 50000.0)])
+    diffs = run_asset_diff(a, b)
+    assert diffs[0]['sev'] == 'big'

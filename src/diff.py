@@ -117,9 +117,7 @@ def run_asset_diff(data_a: dict, data_b: dict) -> list:
 
         if a and b:
             pct = (b['value'] - a['value']) / abs(a['value']) * 100 if a['value'] != 0 else None
-            sev = 'small'
-            if pct is not None:
-                sev = 'big' if abs(pct) > 20 else 'medium' if abs(pct) > 5 else 'small'
+            sev = 'big' if pct is None or abs(pct) > 20 else 'medium' if abs(pct) > 5 else 'small'
             diffs.append({
                 'isin': isin, 'name': a['name'],
                 'val_a': a['value'], 'val_b': b['value'],
@@ -130,14 +128,14 @@ def run_asset_diff(data_a: dict, data_b: dict) -> list:
             diffs.append({
                 'isin': isin, 'name': a['name'],
                 'val_a': a['value'], 'val_b': 0,
-                'abs_diff': a['value'],
+                'abs_diff': abs(a['value']),
                 'pct_diff': -100.0, 'sev': 'big', 'status': 'removed',
             })
         else:
             diffs.append({
                 'isin': isin, 'name': b['name'],
                 'val_a': 0, 'val_b': b['value'],
-                'abs_diff': b['value'],
+                'abs_diff': abs(b['value']),
                 'pct_diff': None, 'sev': 'big', 'status': 'new',
             })
 
