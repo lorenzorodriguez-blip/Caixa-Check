@@ -48,6 +48,20 @@ def _render_diff_summary(diffs: list, date_a: str, date_b: str) -> None:
     _table(sml, 'Cambios menores (<5%)')
 
 
+def _style_pct(val: str) -> str:
+    if val == '—':
+        return ''
+    try:
+        v = float(str(val).replace('%', '').replace('+', ''))
+        if abs(v) > 20:
+            return 'color:#f54260'
+        if abs(v) > 5:
+            return 'color:#f5a742'
+        return 'color:#42f5b3'
+    except ValueError:
+        return ''
+
+
 def _render_asset_diff(asset_diffs: list, date_a: str, date_b: str) -> None:
     if not asset_diffs:
         return
@@ -55,6 +69,9 @@ def _render_asset_diff(asset_diffs: list, date_a: str, date_b: str) -> None:
     new     = [d for d in asset_diffs if d['status'] == 'new']
     removed = [d for d in asset_diffs if d['status'] == 'removed']
     changed = [d for d in asset_diffs if d['status'] == 'changed']
+
+    if not (new or removed or changed):
+        return
 
     st.subheader('Detalle de cartera — cambios por activo')
 
@@ -74,19 +91,6 @@ def _render_asset_diff(asset_diffs: list, date_a: str, date_b: str) -> None:
 
     if changed:
         with st.expander(f'📊 Cambios en valoración — {len(changed)} activo(s)', expanded=False):
-            def _style_pct(val):
-                if val == '—':
-                    return ''
-                try:
-                    v = float(str(val).replace('%', '').replace('+', ''))
-                    if abs(v) > 20:
-                        return 'color:#f54260'
-                    if abs(v) > 5:
-                        return 'color:#f5a742'
-                    return 'color:#42f5b3'
-                except ValueError:
-                    return ''
-
             df_ch = pd.DataFrame([{
                 'Activo': d['name'],
                 'ISIN': d['isin'],
