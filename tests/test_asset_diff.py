@@ -130,10 +130,10 @@ def test_run_asset_diff_sorted_big_first():
 
 
 def test_run_asset_diff_removed_abs_diff_positive():
-    a = _json([_row('Fondo A', 'LU0001', 100000.0)])
+    a = _json([_row('Fondo A', 'LU0001', -50000.0)])
     b = _json([])
     diffs = run_asset_diff(a, b)
-    assert diffs[0]['abs_diff'] >= 0
+    assert diffs[0]['abs_diff'] == 50000.0
 
 
 def test_run_asset_diff_changed_from_zero_is_big():
