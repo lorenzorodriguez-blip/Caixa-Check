@@ -74,3 +74,70 @@ def run_diff(data_a: dict, data_b: dict) -> list:
 
     diffs.sort(key=lambda d: ({'big': 0, 'medium': 1, 'small': 2}[d['sev']], -d['abs_diff']))
     return diffs
+
+
+def extract_assets(data: dict) -> dict:
+    assets: dict = {}
+    for page in data.get('pages', []):
+        for w in page.get('widgets', []):
+            if w.get('name') != 'table_full':
+                continue
+            content = w.get('content') or []
+            if not content:
+                continue
+            for row in content[0].get('data', []):
+                if row.get('type') != 'row':
+                    continue
+                cells = row.get('cells', [])
+                if not cells:
+                    continue
+                isin = cells[0].get('item', {}).get('subvalue')
+                if not isin:
+                    continue
+                name = cells[0].get('item', {}).get('value', '—')
+                mv = None
+                for cell in cells[1:]:
+                    v = cell.get('item', {}).get('value')
+                    if isinstance(v, (int, float)):
+                        mv = float(v)
+                        break
+                if mv is not None:
+                    assets[isin] = {'name': name, 'value': mv}
+    return assets
+
+
+def run_asset_diff(data_a: dict, data_b: dict) -> list:
+    a_assets = extract_assets(data_a)
+    b_assets = extract_assets(data_b)
+
+    diffs = []
+    for isin in set(a_assets) | set(b_assets):
+        a = a_assets.get(isin)
+        b = b_assets.get(isin)
+
+        if a and b:
+            pct = (b['value'] - a['value']) / abs(a['value']) * 100 if a['value'] != 0 else None
+            sev = 'big' if pct is None or abs(pct) > 20 else 'medium' if abs(pct) > 5 else 'small'
+            diffs.append({
+                'isin': isin, 'name': a['name'],
+                'val_a': a['value'], 'val_b': b['value'],
+                'abs_diff': abs(b['value'] - a['value']),
+                'pct_diff': pct, 'sev': sev, 'status': 'changed',
+            })
+        elif a:
+            diffs.append({
+                'isin': isin, 'name': a['name'],
+                'val_a': a['value'], 'val_b': 0,
+                'abs_diff': abs(a['value']),
+                'pct_diff': -100.0, 'sev': 'big', 'status': 'removed',
+            })
+        else:
+            diffs.append({
+                'isin': isin, 'name': b['name'],
+                'val_a': 0, 'val_b': b['value'],
+                'abs_diff': abs(b['value']),
+                'pct_diff': None, 'sev': 'big', 'status': 'new',
+            })
+
+    diffs.sort(key=lambda d: ({'big': 0, 'medium': 1, 'small': 2}[d['sev']], -d['abs_diff']))
+    return diffs

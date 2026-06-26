@@ -57,6 +57,45 @@ def chk(odt, group, widget, rule, csv_val, json_val, mode='abs', page_title='', 
     }
 
 
+def _collect_pct_items(obj):
+    """Recursively collect every dict that contains a 'percentage' key."""
+    found = []
+    if isinstance(obj, list):
+        for item in obj:
+            found.extend(_collect_pct_items(item))
+    elif isinstance(obj, dict):
+        if 'percentage' in obj:
+            found.append(obj)
+        else:
+            for v in obj.values():
+                found.extend(_collect_pct_items(v))
+    return found
+
+
+def _check_dist_rows(items, odt, group, widget, page_title='', widget_id=''):
+    """Check distribution items for negative (<-0.1%) or overlarge (>100%) percentages."""
+    if not items:
+        return None
+    bad = []
+    for r in items:
+        pct = r.get('percentage') or 0
+        val = r.get('value') or 0
+        if pct < -0.001 or pct > 1.0:
+            tag = ' [supera 100%]' if pct > 1.0 else ''
+            severity = 'high' if abs(pct) > 0.05 or pct > 1.0 else 'low'
+            bad.append((severity, f"{r.get('name', '?')}: {pct * 100:+.2f}%  ({fmt(val)}){tag}"))
+    if not bad:
+        return None
+    return {
+        'odt': odt, 'group': group, 'widget': widget,
+        'rule': 'Sin porcentajes negativos ni > 100%',
+        'csv': '0 anomalías', 'json': f'{len(bad)} fila(s)',
+        'status': 'fail' if any(s == 'high' for s, _ in bad) else 'warn',
+        'detail': [label for _, label in bad],
+        'page_title': page_title, 'widget_id': widget_id,
+    }
+
+
 def run_checks(calcs: dict, jx: dict) -> list:
     checks = []
     by_page = jx['by_page']
@@ -508,5 +547,18 @@ def run_checks(calcs: dict, jx: dict) -> list:
                                        'Σ importe = 29a inv. total RV entidad',
                                        'Suma importes sectores = KPI RV entidad',
                                        e_rv_v, val_sum(e_rv_sec), 'match_value'))
+
+    # ── Scan genérico: porcentajes anómalos en cualquier widget ─────────────
+    for key, w in jx['W'].items():
+        items = _collect_pct_items(w['content'])
+        if not items:
+            continue
+        pt = w.get('page_title', '')
+        wid = w.get('widget', '')
+        wtitle = w.get('wtitle', '') or wid
+        group_label = f'{pt} — {wtitle}' if pt else wtitle
+        c = _check_dist_rows(items, '—', group_label, wtitle, pt, wid)
+        if c:
+            checks.append(c)
 
     return checks
