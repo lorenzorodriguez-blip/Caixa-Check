@@ -96,6 +96,12 @@ def _check_dist_rows(items, odt, group, widget, page_title='', widget_id=''):
     }
 
 
+def _kpi_val(d):
+    if d is None:
+        return None
+    return d.get('value', 0) if isinstance(d, dict) else d
+
+
 def run_checks(calcs: dict, jx: dict) -> list:
     checks = []
     by_page = jx['by_page']
@@ -149,7 +155,7 @@ def run_checks(calcs: dict, jx: dict) -> list:
                         'status': 'warn', 'detail': detail, 'page_title': '', 'widget_id': ''})
 
     # ── Global KPI ──────────────────────────────────────────────────────────
-    global_kpi = gd(PI['dist'], 'kpi_list_1')
+    global_kpi = _kpi_val(gd(PI['dist'], 'kpi_list_1'))
     if global_kpi is not None:
         checks.append(chk('—', 'Global', 'Valoración actual total',
                            'CSV sum(final_market_value) = JSON KPI total',
@@ -234,7 +240,7 @@ def run_checks(calcs: dict, jx: dict) -> list:
     # ── Widget 6: kpi_boxes tipo producto ───────────────────────────────────
     all_kpi = [w for w in jx['W'].values() if w.get('name') == 'kpi_box']
     if all_kpi:
-        k_sum = sum(w['content'].get('data', 0) or 0 for w in all_kpi)
+        k_sum = sum(_kpi_val(w['content'].get('data')) or 0 for w in all_kpi)
         page_title = (jx['pages'][PI['dist']].get('layout') or {}).get('title', '') if PI['dist'] >= 0 else ''
         checks.append(chk('6', '6) kpi_boxes tipo producto', 'Σ = Valoración actual (widget 1)',
                            'Suma kpi_boxes = total patrimonio',
@@ -401,7 +407,7 @@ def run_checks(calcs: dict, jx: dict) -> list:
         en, di = ent['name'], ent['dist_idx']
         csv_cust = calcs['by_cust'].get(en, 0)
 
-        e_kpi = gd(di, 'kpi_list_1')
+        e_kpi = _kpi_val(gd(di, 'kpi_list_1'))
         if e_kpi is not None:
             checks.append(chk('19a', f'{en} — 19a) Valoración actual',
                                '= widget 4 total entidad', 'KPI entidad = valoración en tabla activos',
