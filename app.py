@@ -365,8 +365,9 @@ with tab_repo:
 
     st.divider()
     st.subheader('Eliminar reporte')
-    del_reports = list_all_reports()
-    if not del_reports:
+    if st.session_state.get('del_success'):
+        st.success(st.session_state.pop('del_success'))
+    if not all_reports:
         st.info('No hay reportes guardados aún.')
     else:
         del_col1, del_col2 = st.columns(2)
@@ -389,7 +390,7 @@ with tab_repo:
                      type='secondary', key='btn_del'):
             st.session_state['del_confirm'] = True
 
-        if st.session_state.get('del_confirm'):
+        if st.session_state.get('del_confirm') and del_date is not None:
             st.warning(
                 f'¿Seguro? Se eliminarán el JSON y el Excel (si existe) de '
                 f'**{del_client}** / **{del_date}**. Esta acción no se puede deshacer.'
@@ -397,5 +398,5 @@ with tab_repo:
             if st.button('Confirmar eliminación', type='primary', key='btn_del_confirm'):
                 delete_report(del_client, del_date)
                 st.session_state.pop('del_confirm', None)
-                st.success(f'Reporte eliminado — {del_client} / {del_date}')
+                st.session_state['del_success'] = f'Reporte eliminado — {del_client} / {del_date}'
                 st.rerun()
