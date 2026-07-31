@@ -372,7 +372,10 @@ with tab_repo:
     else:
         del_col1, del_col2 = st.columns(2)
         with del_col1:
-            del_client = st.selectbox('Cliente', load_clients(), key='del_client')
+            del_client = st.selectbox(
+                'Cliente', load_clients(), key='del_client',
+                on_change=lambda: st.session_state.pop('del_confirm', None),
+            )
         del_dates = list_reports(del_client)
         with del_col2:
             if del_dates:
@@ -396,7 +399,10 @@ with tab_repo:
                 f'**{del_client}** / **{del_date}**. Esta acción no se puede deshacer.'
             )
             if st.button('Confirmar eliminación', type='primary', key='btn_del_confirm'):
-                delete_report(del_client, del_date)
-                st.session_state.pop('del_confirm', None)
-                st.session_state['del_success'] = f'Reporte eliminado — {del_client} / {del_date}'
-                st.rerun()
+                try:
+                    delete_report(del_client, del_date)
+                    st.session_state.pop('del_confirm', None)
+                    st.session_state['del_success'] = f'Reporte eliminado — {del_client} / {del_date}'
+                    st.rerun()
+                except Exception as e:
+                    st.error(f'Error al eliminar: {e}')
