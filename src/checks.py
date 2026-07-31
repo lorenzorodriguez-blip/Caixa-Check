@@ -3,12 +3,17 @@ from datetime import datetime
 from .constants import TOL, PCT_TOL
 
 
-def _parse_ddmmyyyy(s):
-    """Parse a 'dd/mm/yyyy' string into a date, or None if blank/unparseable."""
+def _parse_date(s):
+    """Parse a date string in 'dd/mm/yyyy' or ISO 8601 (date or datetime) format."""
     if not s or not isinstance(s, str):
         return None
+    s = s.strip()
     try:
-        return datetime.strptime(s.strip(), '%d/%m/%Y').date()
+        return datetime.strptime(s, '%d/%m/%Y').date()
+    except ValueError:
+        pass
+    try:
+        return datetime.strptime(s[:10], '%Y-%m-%d').date()
     except ValueError:
         return None
 
@@ -20,7 +25,7 @@ def _report_date(jx):
             for c in (w.get('content') or []):
                 d = c.get('data')
                 if isinstance(d, dict) and d.get('date'):
-                    parsed = _parse_ddmmyyyy(d['date'])
+                    parsed = _parse_date(d['date'])
                     if parsed:
                         return parsed
     return None
@@ -125,7 +130,7 @@ def _check_price_freshness(calcs, report_date):
     """Flag assets whose last_price_update is stale relative to the report date."""
     bad = []
     for r in calcs['active'].to_dict('records'):
-        price_date = _parse_ddmmyyyy(r.get('last_price_update'))
+        price_date = _parse_date(r.get('last_price_update'))
         if price_date is None:
             continue
         diff_days = max(0, (report_date - price_date).days)

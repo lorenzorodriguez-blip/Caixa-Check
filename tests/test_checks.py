@@ -2,26 +2,26 @@ from datetime import date
 
 import pandas as pd
 
-from src.checks import _parse_ddmmyyyy
+from src.checks import _parse_date
 from src.checks import _report_date
 from src.checks import _check_price_freshness
 from src.checks import run_checks
 
 
-def test_parse_ddmmyyyy_valid():
-    assert _parse_ddmmyyyy('24/07/2026') == date(2026, 7, 24)
+def test_parse_date_valid_ddmmyyyy():
+    assert _parse_date('24/07/2026') == date(2026, 7, 24)
 
 
-def test_parse_ddmmyyyy_invalid_format():
-    assert _parse_ddmmyyyy('2026-07-24') is None
+def test_parse_date_invalid_format():
+    assert _parse_date('not-a-date') is None
 
 
-def test_parse_ddmmyyyy_blank():
-    assert _parse_ddmmyyyy('') is None
+def test_parse_date_blank():
+    assert _parse_date('') is None
 
 
-def test_parse_ddmmyyyy_none():
-    assert _parse_ddmmyyyy(None) is None
+def test_parse_date_none():
+    assert _parse_date(None) is None
 
 
 def test_report_date_found():
@@ -189,3 +189,30 @@ def test_run_checks_skips_price_freshness_when_no_report_date():
     checks = run_checks(calcs, jx)
     freshness = [c for c in checks if c['widget'] == 'Antigüedad de precios de activos']
     assert freshness == []
+
+
+def test_parse_date_iso_date():
+    assert _parse_date('2026-07-22') == date(2026, 7, 22)
+
+
+def test_parse_date_iso_datetime_with_microseconds():
+    assert _parse_date('2026-07-24T06:00:25.364000') == date(2026, 7, 24)
+
+
+def test_price_freshness_iso_format_last_price_update():
+    calcs = _calcs([
+        {'asset_description': 'Fondo A', 'isin': 'LU0001',
+         'last_price_update': '2026-07-01', 'final_market_value': 100.0},
+    ])
+    result = _check_price_freshness(calcs, date(2026, 7, 24))
+    assert result is not None
+    assert result['status'] == 'fail'
+
+
+def test_price_freshness_iso_datetime_last_price_update():
+    calcs = _calcs([
+        {'asset_description': 'Fondo A', 'isin': 'LU0001',
+         'last_price_update': '2026-07-22T06:00:25.364000', 'final_market_value': 100.0},
+    ])
+    result = _check_price_freshness(calcs, date(2026, 7, 24))
+    assert result is None  # 2 days old, well within the OK range
