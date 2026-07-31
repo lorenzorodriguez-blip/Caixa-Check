@@ -1,4 +1,3 @@
-import pytest
 from datetime import date
 from src.repository import save_report, delete_report, list_reports
 
