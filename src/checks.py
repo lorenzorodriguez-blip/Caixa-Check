@@ -1,4 +1,16 @@
+from datetime import datetime
+
 from .constants import TOL, PCT_TOL
+
+
+def _parse_ddmmyyyy(s):
+    """Parse a 'dd/mm/yyyy' string into a date, or None if blank/unparseable."""
+    if not s or not isinstance(s, str):
+        return None
+    try:
+        return datetime.strptime(s.strip(), '%d/%m/%Y').date()
+    except ValueError:
+        return None
 
 
 def fmt(v) -> str:
