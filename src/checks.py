@@ -121,6 +121,34 @@ def _check_dist_rows(items, odt, group, widget, page_title='', widget_id=''):
     }
 
 
+def _check_price_freshness(calcs, report_date):
+    """Flag assets whose last_price_update is stale relative to the report date."""
+    bad = []
+    for r in calcs['active'].to_dict('records'):
+        price_date = _parse_ddmmyyyy(r.get('last_price_update'))
+        if price_date is None:
+            continue
+        diff_days = max(0, (report_date - price_date).days)
+        if diff_days <= 3:
+            continue
+        severity = 'warn' if diff_days <= 7 else 'fail'
+        tag = 'ALERTA' if severity == 'warn' else 'ERROR'
+        bad.append((severity,
+                     f"{r.get('asset_description', '—')} | ISIN: {r.get('isin', '—')} | "
+                     f"precio: {r.get('last_price_update')} | {diff_days} día(s) [{tag}]"))
+    if not bad:
+        return None
+    return {
+        'odt': 'CSV', 'group': 'CSV — Calidad datos',
+        'widget': 'Antigüedad de precios de activos',
+        'rule': 'last_price_update dentro de la semana del informe (≤3 días OK, 4-7 alerta, ≥8 error)',
+        'csv': '0 activos', 'json': f'{len(bad)} activo(s)',
+        'status': 'fail' if any(s == 'fail' for s, _ in bad) else 'warn',
+        'detail': [msg for _, msg in bad],
+        'page_title': '', 'widget_id': '',
+    }
+
+
 def _kpi_val(d):
     if d is None:
         return None
