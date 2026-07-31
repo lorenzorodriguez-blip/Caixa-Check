@@ -5,6 +5,7 @@ import pandas as pd
 from src.checks import _parse_ddmmyyyy
 from src.checks import _report_date
 from src.checks import _check_price_freshness
+from src.checks import run_checks
 
 
 def test_parse_ddmmyyyy_valid():
@@ -140,3 +141,51 @@ def test_price_freshness_check_shape():
     assert result['widget'] == 'Antigüedad de precios de activos'
     assert result['csv'] == '0 activos'
     assert result['json'] == '1 activo(s)'
+
+
+def _minimal_jx(report_date_str):
+    return {
+        'pages': [
+            {'widgets': [{'content': [{'data': {'value': 100, 'count': 1,
+                                                 'date': report_date_str}}]}]},
+        ],
+        'W': {},
+        'by_page': lambda pi, wid: None,
+        'entities': [],
+        'PI': {k: -1 for k in ['dist', 'dist_ent', 'kpi_boxes', 'familia', 'rf1', 'rf2', 'rv']},
+    }
+
+
+def _minimal_calcs(rows):
+    df = pd.DataFrame(rows)
+    empty = df.iloc[0:0]
+    return {
+        'total': 0.0, 'by_cust': {}, 'kpi_boxes': {}, 'lt_alloc': {}, 'lt_currency': {},
+        'rf_total': 0.0, 'rv_total': 0.0,
+        'unclassified': empty, 'missing_ac': empty, 'missing_sac': empty,
+        'active': df,
+    }
+
+
+def test_run_checks_includes_price_freshness_failure():
+    calcs = _minimal_calcs([
+        {'asset_description': 'Fondo A', 'isin': 'LU0001',
+         'last_price_update': '01/07/2026', 'final_market_value': 100.0},
+    ])
+    jx = _minimal_jx('24/07/2026')
+    checks = run_checks(calcs, jx)
+    freshness = [c for c in checks if c['widget'] == 'Antigüedad de precios de activos']
+    assert len(freshness) == 1
+    assert freshness[0]['status'] == 'fail'
+
+
+def test_run_checks_skips_price_freshness_when_no_report_date():
+    calcs = _minimal_calcs([
+        {'asset_description': 'Fondo A', 'isin': 'LU0001',
+         'last_price_update': '01/07/2026', 'final_market_value': 100.0},
+    ])
+    jx = _minimal_jx('')
+    jx['pages'] = [{'widgets': []}]
+    checks = run_checks(calcs, jx)
+    freshness = [c for c in checks if c['widget'] == 'Antigüedad de precios de activos']
+    assert freshness == []

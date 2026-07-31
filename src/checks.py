@@ -207,6 +207,12 @@ def run_checks(calcs: dict, jx: dict) -> list:
                         'csv': '0 activos', 'json': f"{len(calcs['missing_sac'])} activo(s)",
                         'status': 'warn', 'detail': detail, 'page_title': '', 'widget_id': ''})
 
+    report_date = _report_date(jx)
+    if report_date:
+        freshness_check = _check_price_freshness(calcs, report_date)
+        if freshness_check:
+            checks.append(freshness_check)
+
     # ── Global KPI ──────────────────────────────────────────────────────────
     global_kpi = _kpi_val(gd(PI['dist'], 'kpi_list_1'))
     if global_kpi is not None:
