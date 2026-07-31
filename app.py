@@ -405,4 +405,5 @@ with tab_repo:
                     st.session_state['del_success'] = f'Reporte eliminado — {del_client} / {del_date}'
                     st.rerun()
                 except Exception as e:
+                    st.session_state.pop('del_confirm', None)
                     st.error(f'Error al eliminar: {e}')
