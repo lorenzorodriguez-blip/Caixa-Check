@@ -362,3 +362,40 @@ with tab_repo:
         st.dataframe(pd.DataFrame(all_reports), use_container_width=True, hide_index=True)
     else:
         st.info('No hay reportes guardados aún.')
+
+    st.divider()
+    st.subheader('Eliminar reporte')
+    del_reports = list_all_reports()
+    if not del_reports:
+        st.info('No hay reportes guardados aún.')
+    else:
+        del_col1, del_col2 = st.columns(2)
+        with del_col1:
+            del_client = st.selectbox('Cliente', load_clients(), key='del_client')
+        del_dates = list_reports(del_client)
+        with del_col2:
+            if del_dates:
+                del_date = st.selectbox(
+                    'Fecha',
+                    options=list(reversed(del_dates)),
+                    format_func=lambda d: d.strftime('%Y-%m-%d'),
+                    key='del_date',
+                )
+            else:
+                del_date = None
+                st.caption('Sin reportes para este cliente')
+
+        if st.button('🗑 Eliminar reporte', disabled=del_date is None,
+                     type='secondary', key='btn_del'):
+            st.session_state['del_confirm'] = True
+
+        if st.session_state.get('del_confirm'):
+            st.warning(
+                f'¿Seguro? Se eliminarán el JSON y el Excel (si existe) de '
+                f'**{del_client}** / **{del_date}**. Esta acción no se puede deshacer.'
+            )
+            if st.button('Confirmar eliminación', type='primary', key='btn_del_confirm'):
+                delete_report(del_client, del_date)
+                st.session_state.pop('del_confirm', None)
+                st.success(f'Reporte eliminado — {del_client} / {del_date}')
+                st.rerun()
