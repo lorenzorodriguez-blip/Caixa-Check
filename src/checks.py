@@ -140,7 +140,7 @@ def _check_price_freshness(calcs, report_date):
         tag = 'ALERTA' if severity == 'warn' else 'ERROR'
         bad.append((severity,
                      f"{r.get('asset_description', '—')} | ISIN: {r.get('isin', '—')} | "
-                     f"precio: {r.get('last_price_update')} | {diff_days} día(s) [{tag}]"))
+                     f"precio: {price_date.strftime('%d/%m/%Y')} | {diff_days} día(s) [{tag}]"))
     if not bad:
         return None
     return {

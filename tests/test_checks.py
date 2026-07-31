@@ -84,6 +84,18 @@ def test_price_freshness_4_days_is_warn():
     assert 'LU0001' in result['detail'][0]
 
 
+def test_price_freshness_detail_formats_iso_datetime_cleanly():
+    calcs = _calcs([
+        {'asset_description': 'Fondo A', 'isin': 'LU0001',
+         'last_price_update': '2026-07-01T06:00:25.364000', 'final_market_value': 100.0},
+    ])
+    result = _check_price_freshness(calcs, date(2026, 7, 24))
+    assert result is not None
+    assert 'precio: 01/07/2026' in result['detail'][0]
+    assert '06:00:25' not in result['detail'][0]
+    assert '2026-07-01T' not in result['detail'][0]
+
+
 def test_price_freshness_7_days_is_warn():
     calcs = _calcs([
         {'asset_description': 'Fondo A', 'isin': 'LU0001',
