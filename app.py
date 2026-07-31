@@ -9,7 +9,7 @@ from src.checks import run_checks
 from src.diff import run_diff, run_asset_diff
 from src.excel_export import build_excel
 from src.parser import parse_csv
-from src.repository import add_client, get_previous_report, list_all_reports, load_clients, load_report, list_reports, save_report
+from src.repository import add_client, delete_report, get_previous_report, list_all_reports, load_clients, load_report, list_reports, save_report
 
 st.set_page_config(
     page_title='Caixa Check',
@@ -315,12 +315,14 @@ with tab_repo:
                 st.error('Introduce un ID válido.')
 
     st.subheader('Guardar reporte')
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         repo_json_file = st.file_uploader('JSON del reporte', type=['json'], key='repo_json')
     with col2:
-        repo_client = st.selectbox('Cliente', load_clients(), key='repo_client')
+        repo_excel_file = st.file_uploader('Excel (opcional)', type=['xlsx'], key='repo_excel')
     with col3:
+        repo_client = st.selectbox('Cliente', load_clients(), key='repo_client')
+    with col4:
         repo_date = st.date_input('Fecha del reporte', value=date.today(), key='repo_date')
 
     save_clicked = st.button('💾 Guardar reporte', disabled=not repo_json_file, type='primary')
@@ -328,8 +330,10 @@ with tab_repo:
     if save_clicked and repo_json_file:
         try:
             repo_json_data = json.loads(repo_json_file.read().decode('utf-8'))
-            save_report(repo_client, repo_date, repo_json_data)
-            st.success(f'Reporte guardado — {repo_client} / {repo_date}')
+            excel_bytes = repo_excel_file.read() if repo_excel_file else None
+            save_report(repo_client, repo_date, repo_json_data, excel_bytes)
+            label = 'JSON + Excel' if excel_bytes else 'JSON'
+            st.success(f'Reporte guardado ({label}) — {repo_client} / {repo_date}')
 
             prev = get_previous_report(repo_client, repo_date)
             if prev:
