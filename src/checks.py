@@ -13,6 +13,19 @@ def _parse_ddmmyyyy(s):
         return None
 
 
+def _report_date(jx):
+    """Find the report's date by scanning all widgets for the first content.data.date field."""
+    for page in jx.get('pages', []):
+        for w in page.get('widgets', []):
+            for c in (w.get('content') or []):
+                d = c.get('data')
+                if isinstance(d, dict) and d.get('date'):
+                    parsed = _parse_ddmmyyyy(d['date'])
+                    if parsed:
+                        return parsed
+    return None
+
+
 def fmt(v) -> str:
     if v is None:
         return '—'
