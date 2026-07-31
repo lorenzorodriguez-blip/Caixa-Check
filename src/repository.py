@@ -69,6 +69,15 @@ def load_report(client_id: str, report_date: date) -> dict | None:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def delete_report(client_id: str, report_date: date) -> None:
+    d = _client_dir(client_id)
+    date_str = report_date.strftime("%Y-%m-%d")
+    for ext in ('.json', '.xlsx'):
+        p = d / f"{date_str}{ext}"
+        if p.exists():
+            p.unlink()
+
+
 def get_previous_report(client_id: str, current_date: date) -> tuple[date, dict] | None:
     dates = list_reports(client_id)
     previous = [d for d in dates if d < current_date]
