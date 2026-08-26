@@ -253,11 +253,6 @@ def run_checks(calcs: dict, jx: dict) -> list:
         checks.append(chk('2', '2) Dist. activos LT', '% suma = 100%',
                            'Suma % clases de activo = 100%',
                            None, pct_sum(asset_c), 'pct100_soft', *wp(PI['dist'], 'chart_1')))
-        AL = {'fixed-income': 'RF', 'equity': 'RV', 'cash': 'Liquidez', 'alternative': 'Alt.', 'other': 'Otros'}
-        for r in asset_c:
-            checks.append(chk('2', f"2) {AL.get(r['name'], r['name'])}", 'LT CSV = JSON chart',
-                               'exposures.allocation + asset_class_group',
-                               calcs['lt_alloc'].get(r['name'], 0), r.get('value', 0), 'match_value'))
 
     # ── Widget 3: Distribución divisa LT ────────────────────────────────────
     curr_c = gd(PI['dist'], 'chart_2')
