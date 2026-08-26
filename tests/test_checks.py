@@ -6,6 +6,27 @@ from src.checks import _parse_date
 from src.checks import _report_date
 from src.checks import _check_price_freshness
 from src.checks import run_checks
+from src.checks import chk
+
+
+def test_pct100_soft_pass_when_exact():
+    result = chk('2', 'g', 'w', 'r', None, 1.0, 'pct100_soft')
+    assert result['status'] == 'pass'
+
+
+def test_pct100_soft_warn_within_2pp():
+    result = chk('2', 'g', 'w', 'r', None, 1.01, 'pct100_soft')
+    assert result['status'] == 'warn'
+
+
+def test_pct100_soft_never_escalates_to_fail():
+    result = chk('2', 'g', 'w', 'r', None, 1.10, 'pct100_soft')
+    assert result['status'] == 'warn'
+
+
+def test_pct100_strict_still_fails_at_same_deviation():
+    result = chk('2', 'g', 'w', 'r', None, 1.10, 'pct100')
+    assert result['status'] == 'fail'
 
 
 def test_parse_date_valid_ddmmyyyy():

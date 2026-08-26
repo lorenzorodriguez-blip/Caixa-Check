@@ -56,6 +56,14 @@ def chk(odt, group, widget, rule, csv_val, json_val, mode='abs', page_title='', 
         csv_str, json_str = '100,00%', fmt_p(json_val)
         detail = [] if d < PCT_TOL else [f'Δ {d * 100:.2f}pp']
 
+    elif mode == 'pct100_soft':
+        # Look-through percentages (post fund exposures.allocation) legitimately
+        # drift when a fund's exposures data is incomplete — never a hard error.
+        d = abs(json_val - 1)
+        status = 'pass' if d < PCT_TOL else 'warn'
+        csv_str, json_str = '100,00%', fmt_p(json_val)
+        detail = [] if d < PCT_TOL else [f'Δ {d * 100:.2f}pp']
+
     elif mode == 'no_negative':
         status = 'pass' if json_val >= 0 else 'fail'
         csv_str, json_str = '≥ 0', fmt(json_val)
@@ -244,7 +252,7 @@ def run_checks(calcs: dict, jx: dict) -> list:
     if asset_c:
         checks.append(chk('2', '2) Dist. activos LT', '% suma = 100%',
                            'Suma % clases de activo = 100%',
-                           None, pct_sum(asset_c), 'pct100', *wp(PI['dist'], 'chart_1')))
+                           None, pct_sum(asset_c), 'pct100_soft', *wp(PI['dist'], 'chart_1')))
         AL = {'fixed-income': 'RF', 'equity': 'RV', 'cash': 'Liquidez', 'alternative': 'Alt.', 'other': 'Otros'}
         for r in asset_c:
             checks.append(chk('2', f"2) {AL.get(r['name'], r['name'])}", 'LT CSV = JSON chart',
@@ -256,7 +264,7 @@ def run_checks(calcs: dict, jx: dict) -> list:
     if curr_c:
         checks.append(chk('3', '3) Dist. divisa LT', '% suma ≈ 100%',
                            'Suma % divisas LT = 100%',
-                           None, pct_sum(curr_c), 'pct100', *wp(PI['dist'], 'chart_2')))
+                           None, pct_sum(curr_c), 'pct100_soft', *wp(PI['dist'], 'chart_2')))
 
     # ── Widget 4: Tabla activos x entidad ───────────────────────────────────
     dist_t = gd(PI['dist_ent'], 'table_1')
@@ -480,7 +488,7 @@ def run_checks(calcs: dict, jx: dict) -> list:
         e_as_c = gd(di, 'chart_1')
         if e_as_c:
             checks.append(chk('20a', f'{en} — 20a) Dist. activos LT', '% suma = 100%',
-                               'Suma % LT activos entidad = 100%', None, pct_sum(e_as_c), 'pct100'))
+                               'Suma % LT activos entidad = 100%', None, pct_sum(e_as_c), 'pct100_soft'))
             if dist_t:
                 cr4 = next((c for c in dist_t if c.get('name') != 'total' and c.get('name') == en), None)
                 tot4 = next((d for d in (cr4.get('distribution') or []) if d.get('name') == 'total'), None) if cr4 else None
@@ -506,7 +514,7 @@ def run_checks(calcs: dict, jx: dict) -> list:
         e_cur_c = gd(di, 'chart_2')
         if e_cur_c:
             checks.append(chk('22a', f'{en} — 22a) Divisa LT', '% suma ≈ 100%',
-                               'Suma % divisas entidad = 100%', None, pct_sum(e_cur_c), 'pct100'))
+                               'Suma % divisas entidad = 100%', None, pct_sum(e_cur_c), 'pct100_soft'))
 
         if ent['rf_idx'] >= 0:
             ri = ent['rf_idx']
