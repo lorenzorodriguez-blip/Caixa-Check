@@ -311,6 +311,8 @@ with tab_diff:
         if 'diff_dates' in st.session_state:
             date_a, date_b = st.session_state['diff_dates']
         else:
+            # t(..., lang) here (not tr) to match src/diff.py's own fallback
+            # convention for these same keys, which can't use app.py's tr
             date_a = diffs[0]['date_a'] if diffs else t('diff.period_a', lang)
             date_b = diffs[0]['date_b'] if diffs else t('diff.period_b', lang)
         _render_diff_summary(diffs, date_a, date_b, lang)
