@@ -8,6 +8,7 @@ from openpyxl.utils import get_column_letter
 from .calcs import build_calcs, extract_json
 from .checks import run_checks
 from .constants import MD_COLUMNS
+from .i18n import t
 from .market_data import build_market_data_sheets
 
 
@@ -25,18 +26,20 @@ def _autofit(ws, col_widths: list):
         ws.column_dimensions[get_column_letter(i)].width = w
 
 
-def build_excel(df_csv, json_data: dict) -> bytes:
+def build_excel(df_csv, json_data: dict, lang: str = 'es') -> bytes:
     wb = openpyxl.Workbook()
 
-    # ── Sheet 1: Revisión ────────────────────────────────────────────────────
+    # ── Sheet 1: Revisión / Review ───────────────────────────────────────────
     ws1 = wb.active
-    ws1.title = 'Revisión'
+    ws1.title = t('excel.sheet_review', lang)
 
     calcs = build_calcs(df_csv)
     jx = extract_json(json_data)
     all_checks = run_checks(calcs, jx)
 
-    headers = ['ODT', 'Grupo', 'Widget / Check', 'Regla', 'Esperado (CSV)', 'JSON actual', 'Estado', 'Δ', 'Página', 'Widget ID']
+    headers = ['ODT', t('excel.col_group', lang), 'Widget / Check', t('excel.col_rule', lang),
+               t('excel.col_expected_csv', lang), t('excel.col_actual_json', lang),
+               t('excel.col_status', lang), 'Δ', t('excel.col_page', lang), 'Widget ID']
     ws1.append(headers)
     for cell in ws1[1]:
         cell.fill = _HEADER_FILL
@@ -52,8 +55,8 @@ def build_excel(df_csv, json_data: dict) -> bytes:
 
     _autofit(ws1, [8, 30, 35, 45, 16, 16, 8, 20, 35, 18])
 
-    # ── Sheet 2: Datos CSV ───────────────────────────────────────────────────
-    ws2 = wb.create_sheet('Datos CSV')
+    # ── Sheet 2: Datos CSV / CSV Data ─────────────────────────────────────────
+    ws2 = wb.create_sheet(t('excel.sheet_csv_data', lang))
     csv_headers = list(df_csv.columns)
     ws2.append(csv_headers)
     for cell in ws2[1]:
@@ -66,7 +69,7 @@ def build_excel(df_csv, json_data: dict) -> bytes:
     # ── Sheets 3-4: Market Data ──────────────────────────────────────────────
     all_records, fondos_records = build_market_data_sheets(df_csv)
 
-    for sheet_name, records in [('look-through', all_records), ('Fondos', fondos_records)]:
+    for sheet_name, records in [('look-through', all_records), (t('excel.sheet_funds', lang), fondos_records)]:
         ws = wb.create_sheet(sheet_name)
         ws.append(MD_COLUMNS)
         for cell in ws[1]:
