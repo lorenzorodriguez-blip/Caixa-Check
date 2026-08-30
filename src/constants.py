@@ -55,6 +55,9 @@ FONDOS_GROUPS_MD = {
     'other_financials', 'other-financials',
 }
 
+# NOTE: FONDOS_DROPPED_COLUMNS and FONDOS_ALLOCATION_COLUMNS (below) derive
+# from this list by exact-name and prefix matching. If you rename, add, or
+# remove a column here, check those derivations and tests/test_constants.py.
 MD_COLUMNS = [
     'symbol', 'date', 'investor_account', 'quantity', 'cost_basis',
     'market_value', 'local_market_value', 'position_gl', 'asset_description',
