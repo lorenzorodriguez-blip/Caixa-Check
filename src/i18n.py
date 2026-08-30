@@ -11,16 +11,8 @@ STRINGS: dict[str, dict[str, str]] = {
     "diff.period_b": {"es": "Periodo B", "en": "Period B"},
     "diff.page_fallback": {"es": "Pág {n}", "en": "Page {n}"},
 
-    # ── excel_export.py ──────────────────────────────────────────────────
-    "excel.sheet_review": {"es": "Revisión", "en": "Review"},
-    "excel.sheet_csv_data": {"es": "Datos CSV", "en": "CSV Data"},
-    "excel.sheet_funds": {"es": "Fondos", "en": "Funds"},
-    "excel.col_group": {"es": "Grupo", "en": "Group"},
-    "excel.col_rule": {"es": "Regla", "en": "Rule"},
-    "excel.col_expected_csv": {"es": "Esperado (CSV)", "en": "Expected (CSV)"},
-    "excel.col_actual_json": {"es": "JSON actual", "en": "Actual (JSON)"},
-    "excel.col_status": {"es": "Estado", "en": "Status"},
-    "excel.col_page": {"es": "Página", "en": "Page"},
+    # NOTE: excel_export.py is NOT translated -- build_excel() always produces
+    # the Spanish workbook regardless of the UI language toggle, by request.
 
     # ── app.py: _render_diff_summary / _render_asset_diff ───────────────
     "ui.total_metrics": {"es": "Total métricas", "en": "Total metrics"},

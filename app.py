@@ -230,7 +230,7 @@ with tab_validate:
 
         # Excel download
         with st.spinner(t('ui.preparing_excel', lang)):
-            excel_bytes = build_excel(st.session_state['df'], st.session_state['json_data'], lang=lang)
+            excel_bytes = build_excel(st.session_state['df'], st.session_state['json_data'])
         filename = f"CaixaCheck_{date.today().strftime('%Y%m%d')}.xlsx"
         st.download_button(
             t('ui.download_excel_btn', lang),
