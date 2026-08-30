@@ -1,6 +1,6 @@
 import pandas as pd
 
-from .constants import ASSET_CLASS_MAP_MD, FONDOS_ALLOCATION_COLUMNS, FONDOS_GROUPS_MD, FONDOS_MD_COLUMNS, MD_COLUMNS
+from .constants import ASSET_CLASS_MAP_MD, FONDOS_ALLOCATION_COLUMNS, FONDOS_GROUPS_MD, FONDOS_MD_COLUMNS
 from .parser import safe_parse
 
 
