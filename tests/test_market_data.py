@@ -64,3 +64,12 @@ def test_lookthrough_sheet_still_uses_full_md_columns_and_percentages():
     rec = all_records[0]
     assert rec['Allocation_Equity'] == 40.0  # still a percentage, unaffected
     assert 'Alpha' in rec  # ratio columns still present on look-through
+
+
+def test_fondos_record_zero_market_value_gives_zero_not_error():
+    df = pd.DataFrame([_row(final_market_value=0.0)])
+    _, fondos_records = build_market_data_sheets(df)
+
+    rec = fondos_records[0]
+    assert rec['Allocation_Equity'] == 0.0
+    assert rec['Currency_EUR'] == 0.0

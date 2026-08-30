@@ -196,6 +196,10 @@ def _to_fondos_record(rec: dict) -> dict:
     for col in FONDOS_MD_COLUMNS:
         if col in FONDOS_ALLOCATION_COLUMNS:
             pct = rec.get(col)
+            # Rounded to cents: this is a currency amount (unlike the raw,
+            # unrounded market_value/final_market_value fields elsewhere in
+            # this module), and rounding also suppresses float noise from
+            # the multiplication (e.g. 39999.999999996).
             out[col] = None if pct is None else round(pct / 100 * fmv, 2)
         else:
             out[col] = rec.get(col)
