@@ -92,6 +92,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "ui.report_saved": {"es": "Reporte guardado ({label}) — {client} / {date}", "en": "Report saved ({label}) — {client} / {date}"},
     "ui.no_prev_report_info": {"es": "No hay reporte anterior guardado para este cliente. La comparación estará disponible la próxima semana.", "en": "No previous report saved for this client yet. The comparison will be available next week."},
     "ui.error_saving": {"es": "Error al guardar: {error}", "en": "Error saving: {error}"},
+    "ui.error_deleting": {"es": "Error al eliminar: {error}", "en": "Error deleting: {error}"},
     "ui.comparison_header": {"es": "Comparación: {a} vs {b}", "en": "Comparison: {a} vs {b}"},
     "ui.report_history_subheader": {"es": "Historial de reportes", "en": "Report history"},
     "ui.no_reports_yet": {"es": "No hay reportes guardados aún.", "en": "No reports saved yet."},

@@ -117,6 +117,10 @@ def _render_asset_diff(asset_diffs: list, date_a: str, date_b: str, lang: str) -
             st.dataframe(styled, use_container_width=True, hide_index=True)
 
 
+# Tab 1 below uses t('ui.key', lang) directly (written before the tr() shortcut
+# was introduced); Tabs 2-3 use tr('ui.key'). Both are equivalent -- tr() is
+# just functools.partial(t, lang=lang) -- this isn't a bug, just two call
+# styles from different points in this feature's development.
 tab_validate, tab_diff, tab_repo = st.tabs([t('ui.tab_validate', lang), t('ui.tab_diff', lang), t('ui.tab_repo', lang)])
 
 # ── Tab 1: Validación / Validation ────────────────────────────────────────────
@@ -428,4 +432,4 @@ with tab_repo:
                     st.rerun()
                 except Exception as e:
                     st.session_state.pop('del_confirm', None)
-                    st.error(tr('ui.error_saving', error=e))
+                    st.error(tr('ui.error_deleting', error=e))
