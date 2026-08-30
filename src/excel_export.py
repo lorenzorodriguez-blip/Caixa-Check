@@ -35,7 +35,7 @@ def build_excel(df_csv, json_data: dict, lang: str = 'es') -> bytes:
 
     calcs = build_calcs(df_csv)
     jx = extract_json(json_data)
-    all_checks = run_checks(calcs, jx)
+    all_checks = run_checks(calcs, jx)  # NOTE: check row content (group/rule/widget) is not translated, regardless of lang
 
     headers = ['ODT', t('excel.col_group', lang), 'Widget / Check', t('excel.col_rule', lang),
                t('excel.col_expected_csv', lang), t('excel.col_actual_json', lang),
