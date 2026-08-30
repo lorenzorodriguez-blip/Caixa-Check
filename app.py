@@ -8,6 +8,7 @@ from src.calcs import build_calcs, extract_json
 from src.checks import run_checks
 from src.diff import run_diff, run_asset_diff
 from src.excel_export import build_excel
+from src.i18n import t
 from src.parser import parse_csv
 from src.repository import add_client, delete_report, get_previous_report, list_all_reports, load_clients, load_report, list_reports, save_report
 
@@ -17,35 +18,46 @@ st.set_page_config(
     layout='wide',
 )
 
+st.session_state.setdefault('lang', 'es')
+_LANG_LABELS = {'es': '🇪🇸 Español', 'en': '🇬🇧 English'}
+lang = st.radio(
+    'Language',
+    options=list(_LANG_LABELS.keys()),
+    format_func=lambda k: _LANG_LABELS[k],
+    horizontal=True,
+    label_visibility='collapsed',
+    key='lang',
+)
+
 st.title('Caixa Check')
 
 
-def _render_diff_summary(diffs: list, date_a: str, date_b: str) -> None:
+def _render_diff_summary(diffs: list, date_a: str, date_b: str, lang: str) -> None:
     big = [d for d in diffs if d['sev'] == 'big']
     med = [d for d in diffs if d['sev'] == 'medium']
     sml = [d for d in diffs if d['sev'] == 'small']
 
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric('Total métricas', len(diffs))
-    m2.metric('Cambios >20%', len(big))
-    m3.metric('Cambios 5-20%', len(med))
-    m4.metric('Cambios <5%', len(sml))
+    m1.metric(t('ui.total_metrics', lang), len(diffs))
+    m2.metric(t('ui.changes_gt20', lang), len(big))
+    m3.metric(t('ui.changes_5_20', lang), len(med))
+    m4.metric(t('ui.changes_lt5', lang), len(sml))
 
     def _table(items, label):
         if not items:
             return
         st.subheader(label)
         st.dataframe(pd.DataFrame([{
-            'Métrica':   d['label'],
+            t('ui.col_metric', lang): d['label'],
             date_a:      d['val_a'],
             date_b:      d['val_b'],
-            'Variación': d['val_b'] - d['val_a'],
+            t('ui.col_variation', lang): d['val_b'] - d['val_a'],
             '%':         f"{d['pct_diff']:+.1f}%" if d['pct_diff'] is not None else '—',
         } for d in items]), use_container_width=True, hide_index=True)
 
-    _table(big, '⚠ Cambios significativos (>20%)')
-    _table(med, 'Cambios moderados (5–20%)')
-    _table(sml, 'Cambios menores (<5%)')
+    _table(big, t('ui.big_changes_header', lang))
+    _table(med, t('ui.medium_changes_header', lang))
+    _table(sml, t('ui.small_changes_header', lang))
 
 
 def _style_pct(val: str) -> str:
@@ -62,7 +74,7 @@ def _style_pct(val: str) -> str:
         return ''
 
 
-def _render_asset_diff(asset_diffs: list, date_a: str, date_b: str) -> None:
+def _render_asset_diff(asset_diffs: list, date_a: str, date_b: str, lang: str) -> None:
     if not asset_diffs:
         return
 
@@ -73,26 +85,26 @@ def _render_asset_diff(asset_diffs: list, date_a: str, date_b: str) -> None:
     if not (new or removed or changed):
         return
 
-    st.subheader('Detalle de cartera — cambios por activo')
+    st.subheader(t('ui.portfolio_detail_header', lang))
 
     if new:
-        with st.expander(f'🆕 Entradas — {len(new)} activo(s) nuevo(s)', expanded=False):
+        with st.expander(t('ui.entries_expander', lang, n=len(new)), expanded=False):
             st.dataframe(pd.DataFrame([{
-                'Activo': d['name'], 'ISIN': d['isin'],
-                f'Valoración ({date_b})': d['val_b'],
+                t('ui.col_asset', lang): d['name'], 'ISIN': d['isin'],
+                t('ui.valuation_col', lang, date=date_b): d['val_b'],
             } for d in new]), use_container_width=True, hide_index=True)
 
     if removed:
-        with st.expander(f'❌ Salidas — {len(removed)} activo(s) que salieron', expanded=False):
+        with st.expander(t('ui.exits_expander', lang, n=len(removed)), expanded=False):
             st.dataframe(pd.DataFrame([{
-                'Activo': d['name'], 'ISIN': d['isin'],
-                f'Valoración ({date_a})': d['val_a'],
+                t('ui.col_asset', lang): d['name'], 'ISIN': d['isin'],
+                t('ui.valuation_col', lang, date=date_a): d['val_a'],
             } for d in removed]), use_container_width=True, hide_index=True)
 
     if changed:
-        with st.expander(f'📊 Cambios en valoración — {len(changed)} activo(s)', expanded=False):
+        with st.expander(t('ui.value_changes_expander', lang, n=len(changed)), expanded=False):
             df_ch = pd.DataFrame([{
-                'Activo': d['name'],
+                t('ui.col_asset', lang): d['name'],
                 'ISIN': d['isin'],
                 date_a: d['val_a'],
                 date_b: d['val_b'],
