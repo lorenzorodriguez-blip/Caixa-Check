@@ -1,6 +1,6 @@
 import pandas as pd
 
-from .constants import ASSET_CLASS_MAP_MD, FONDOS_GROUPS_MD, MD_COLUMNS
+from .constants import ASSET_CLASS_MAP_MD, FONDOS_ALLOCATION_COLUMNS, FONDOS_GROUPS_MD, FONDOS_MD_COLUMNS, MD_COLUMNS
 from .parser import safe_parse
 
 
@@ -186,6 +186,22 @@ def transform_row(row: dict) -> dict:
     }
 
 
+def _to_fondos_record(rec: dict) -> dict:
+    """Convert one look-through record into its Fondos-sheet equivalent:
+    allocation-breakdown percentages become market_value * pct / 100 (a euro
+    amount); everything else in FONDOS_MD_COLUMNS is copied unchanged; columns
+    not in FONDOS_MD_COLUMNS (fund-level ratio metrics) are dropped."""
+    fmv = rec['market_value']
+    out = {}
+    for col in FONDOS_MD_COLUMNS:
+        if col in FONDOS_ALLOCATION_COLUMNS:
+            pct = rec.get(col)
+            out[col] = None if pct is None else round(pct / 100 * fmv, 2)
+        else:
+            out[col] = rec.get(col)
+    return out
+
+
 def build_market_data_sheets(df: pd.DataFrame) -> tuple[list, list]:
     all_records, fondos_records = [], []
     for row in df.to_dict('records'):
@@ -193,5 +209,5 @@ def build_market_data_sheets(df: pd.DataFrame) -> tuple[list, list]:
         rec = transform_row(row)
         all_records.append(rec)
         if acg in FONDOS_GROUPS_MD:
-            fondos_records.append(rec)
+            fondos_records.append(_to_fondos_record(rec))
     return all_records, fondos_records
