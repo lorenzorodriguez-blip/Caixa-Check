@@ -7,7 +7,7 @@ from openpyxl.utils import get_column_letter
 
 from .calcs import build_calcs, extract_json
 from .checks import run_checks
-from .constants import MD_COLUMNS
+from .constants import FONDOS_MD_COLUMNS, MD_COLUMNS
 from .market_data import build_market_data_sheets
 
 
@@ -66,15 +66,18 @@ def build_excel(df_csv, json_data: dict) -> bytes:
     # ── Sheets 3-4: Market Data ──────────────────────────────────────────────
     all_records, fondos_records = build_market_data_sheets(df_csv)
 
-    for sheet_name, records in [('look-through', all_records), ('Fondos', fondos_records)]:
+    for sheet_name, records, columns in [
+        ('look-through', all_records, MD_COLUMNS),
+        ('Fondos', fondos_records, FONDOS_MD_COLUMNS),
+    ]:
         ws = wb.create_sheet(sheet_name)
-        ws.append(MD_COLUMNS)
+        ws.append(columns)
         for cell in ws[1]:
             cell.fill = _HEADER_FILL
             cell.font = _HEADER_FONT
         for rec in records:
-            ws.append([rec.get(col, '') if rec.get(col) is not None else '' for col in MD_COLUMNS])
-        _autofit(ws, [max(12, min(len(h) + 2, 28)) for h in MD_COLUMNS])
+            ws.append([rec.get(col, '') if rec.get(col) is not None else '' for col in columns])
+        _autofit(ws, [max(12, min(len(h) + 2, 28)) for h in columns])
 
     buf = io.BytesIO()
     wb.save(buf)

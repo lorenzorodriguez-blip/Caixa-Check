@@ -4,6 +4,7 @@ import openpyxl
 import pandas as pd
 
 from src.excel_export import build_excel
+from src.constants import FONDOS_MD_COLUMNS, MD_COLUMNS
 
 
 def _make_inputs():
@@ -28,3 +29,17 @@ def test_build_excel_always_builds_spanish_headers():
 
     assert 'Datos CSV' in wb.sheetnames
     assert 'Fondos' in wb.sheetnames
+
+
+def test_fondos_sheet_uses_narrower_column_set():
+    df, json_data = _make_inputs()
+    result = build_excel(df, json_data)
+
+    wb = openpyxl.load_workbook(io.BytesIO(result))
+    lookthrough_headers = [cell.value for cell in wb['look-through'][1]]
+    fondos_headers = [cell.value for cell in wb['Fondos'][1]]
+
+    assert lookthrough_headers == MD_COLUMNS
+    assert fondos_headers == FONDOS_MD_COLUMNS
+    assert 'Alpha' in lookthrough_headers
+    assert 'Alpha' not in fondos_headers
