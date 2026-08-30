@@ -1,3 +1,4 @@
+import functools
 import json
 from datetime import date
 
@@ -28,6 +29,7 @@ lang = st.radio(
     label_visibility='collapsed',
     key='lang',
 )
+tr = functools.partial(t, lang=lang)
 
 st.title('Caixa Check')
 
