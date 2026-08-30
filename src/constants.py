@@ -104,3 +104,28 @@ MD_COLUMNS = [
     'last_price_update', 'risk_type', 'service_type',
     'investor', 'contact', 'investor_name',
 ]
+
+# ── Fondos sheet: allocation-as-€-value column sets ──────────────────────────
+# Fund-level ratio/performance metrics -- not allocation weights, so they don't
+# make sense multiplied by market value (there's no "market value of Beta").
+# Dropped from the Fondos sheet entirely; still visible on look-through.
+FONDOS_DROPPED_COLUMNS = {
+    'Alpha', 'Alpha_1', 'Beta', 'Beta_1', 'TER', 'TER_1', 'TIR', 'TIR_1',
+    'Volatility', 'Volatility_1', 'Duration', 'Duration_1', 'Cupon', 'Cupon_1',
+    'Dividend', 'Dividend_1', 'PER', 'PER_1',
+}
+
+# Every MD_COLUMNS name under these prefixes is a % allocation-breakdown
+# column (how the fund's value is distributed across a category), as opposed
+# to an identity/descriptive field. Matched by prefix, case-sensitive, so e.g.
+# 'currency' (lowercase, the raw CSV field) is untouched by 'Currency_'.
+_FONDOS_ALLOCATION_PREFIXES = (
+    'Allocation_', 'Currency_', 'Rating Grade_', 'Rating_', 'Sector_',
+    'Style_', 'Maturity_', 'Region_EQ_', 'Region_FI_', 'Revenue VI_',
+)
+
+FONDOS_MD_COLUMNS = [c for c in MD_COLUMNS if c not in FONDOS_DROPPED_COLUMNS]
+
+FONDOS_ALLOCATION_COLUMNS = [
+    c for c in FONDOS_MD_COLUMNS if c.startswith(_FONDOS_ALLOCATION_PREFIXES)
+]
