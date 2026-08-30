@@ -65,7 +65,9 @@ def chk(odt, group, widget, rule, csv_val, json_val, mode='abs', page_title='', 
         detail = [] if d < PCT_TOL else [f'Δ {d * 100:.2f}pp']
 
     elif mode == 'no_negative':
-        status = 'pass' if json_val >= 0 else 'fail'
+        # Always a warning, never a failure -- a negative value here is a
+        # data-quality signal worth flagging, not a hard error.
+        status = 'pass' if json_val >= 0 else 'warn'
         csv_str, json_str = '≥ 0', fmt(json_val)
         detail = [f'Negativo: {fmt(json_val)}'] if json_val < 0 else []
 
@@ -111,7 +113,9 @@ def _collect_pct_items(obj):
 
 
 def _check_dist_rows(items, odt, group, widget, page_title='', widget_id=''):
-    """Check distribution items for negative (<-0.1%) or overlarge (>100%) percentages."""
+    """Check distribution items for negative (<-0.1%) or overlarge (>100%)
+    percentages. Always a warning, never a failure -- these are data-quality
+    signals worth flagging, not hard errors."""
     if not items:
         return None
     bad = []
@@ -120,16 +124,15 @@ def _check_dist_rows(items, odt, group, widget, page_title='', widget_id=''):
         val = r.get('value') or 0
         if pct < -0.001 or pct > 1.0:
             tag = ' [supera 100%]' if pct > 1.0 else ''
-            severity = 'high' if abs(pct) > 0.05 or pct > 1.0 else 'low'
-            bad.append((severity, f"{r.get('name', '?')}: {pct * 100:+.2f}%  ({fmt(val)}){tag}"))
+            bad.append(f"{r.get('name', '?')}: {pct * 100:+.2f}%  ({fmt(val)}){tag}")
     if not bad:
         return None
     return {
         'odt': odt, 'group': group, 'widget': widget,
         'rule': 'Sin porcentajes negativos ni > 100%',
         'csv': '0 anomalías', 'json': f'{len(bad)} fila(s)',
-        'status': 'fail' if any(s == 'high' for s, _ in bad) else 'warn',
-        'detail': [label for _, label in bad],
+        'status': 'warn',
+        'detail': bad,
         'page_title': page_title, 'widget_id': widget_id,
     }
 

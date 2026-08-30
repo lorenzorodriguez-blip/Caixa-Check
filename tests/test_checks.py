@@ -5,6 +5,7 @@ import pandas as pd
 from src.checks import _parse_date
 from src.checks import _report_date
 from src.checks import _check_price_freshness
+from src.checks import _check_dist_rows
 from src.checks import run_checks
 from src.checks import chk
 
@@ -27,6 +28,37 @@ def test_pct100_soft_never_escalates_to_fail():
 def test_pct100_strict_still_fails_at_same_deviation():
     result = chk('2', 'g', 'w', 'r', None, 1.10, 'pct100')
     assert result['status'] == 'fail'
+
+
+def test_no_negative_is_warning_not_failure():
+    result = chk('11', 'g', 'w', 'r', None, -41761.0, 'no_negative')
+    assert result['status'] == 'warn'
+    assert 'Negativo' in result['detail'][0]
+
+
+def test_no_negative_still_passes_when_non_negative():
+    result = chk('11', 'g', 'w', 'r', None, 0.0, 'no_negative')
+    assert result['status'] == 'pass'
+
+
+def test_dist_rows_negative_percentage_is_warning_not_failure():
+    # A large negative percentage used to escalate to 'fail'; now always 'warn'.
+    items = [{'name': 'other', 'percentage': -0.20, 'value': -5000}]
+    result = _check_dist_rows(items, '—', 'g', 'w')
+    assert result['status'] == 'warn'
+
+
+def test_dist_rows_over_100_percent_is_warning_not_failure():
+    items = [{'name': 'eur', 'percentage': 1.05, 'value': 10000}]
+    result = _check_dist_rows(items, '—', 'g', 'w')
+    assert result['status'] == 'warn'
+    assert 'supera 100%' in result['detail'][0]
+
+
+def test_dist_rows_below_threshold_is_not_flagged_at_all():
+    items = [{'name': 'other', 'percentage': -0.001, 'value': -10}]
+    result = _check_dist_rows(items, '—', 'g', 'w')
+    assert result is None  # not < -0.1% (strict), so below the flagging threshold
 
 
 def test_parse_date_valid_ddmmyyyy():
