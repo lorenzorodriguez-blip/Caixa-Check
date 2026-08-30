@@ -1,11 +1,11 @@
 from .i18n import t
 
 
-def extract_metrics(data: dict) -> dict:
+def extract_metrics(data: dict, lang: str = 'es') -> dict:
     pages = data.get('pages', [])
     metrics: dict = {}
     for i, page in enumerate(pages):
-        pt = (page.get('layout') or {}).get('title', '') or f'Pág {i}'
+        pt = (page.get('layout') or {}).get('title', '') or t('diff.page_fallback', lang, n=i)
         for w in page.get('widgets', []):
             content = w.get('content') or []
             if not content:
@@ -43,8 +43,8 @@ def extract_metrics(data: dict) -> dict:
 
 
 def run_diff(data_a: dict, data_b: dict, lang: str = 'es') -> list:
-    m_a = extract_metrics(data_a)
-    m_b = extract_metrics(data_b)
+    m_a = extract_metrics(data_a, lang)
+    m_b = extract_metrics(data_b, lang)
 
     date_a = (((data_a.get('pages') or [{}])[3:4] or [{}])[0]
                .get('widgets', [{}])[0:1] or [{}])[0]

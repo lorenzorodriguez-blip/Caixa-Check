@@ -9,6 +9,7 @@ STRINGS: dict[str, dict[str, str]] = {
     # ── diff.py ──────────────────────────────────────────────────────────
     "diff.period_a": {"es": "Periodo A", "en": "Period A"},
     "diff.period_b": {"es": "Periodo B", "en": "Period B"},
+    "diff.page_fallback": {"es": "Pág {n}", "en": "Page {n}"},
 
     # ── excel_export.py ──────────────────────────────────────────────────
     "excel.sheet_review": {"es": "Revisión", "en": "Review"},

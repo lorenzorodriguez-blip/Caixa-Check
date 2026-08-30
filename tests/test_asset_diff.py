@@ -159,3 +159,19 @@ def test_run_asset_diff_changed_from_zero_is_big():
     b = _json([_row('Fondo A', 'LU0001', 50000.0)])
     diffs = run_asset_diff(a, b)
     assert diffs[0]['sev'] == 'big'
+
+
+_KPI_PAGE_NO_TITLE_A = {'widgets': [{'name': 'kpi_box', 'title': 'X', 'content': [{'data': 100.0}]}]}
+_KPI_PAGE_NO_TITLE_B = {'widgets': [{'name': 'kpi_box', 'title': 'X', 'content': [{'data': 150.0}]}]}
+
+
+def test_run_diff_page_fallback_label_default_to_spanish():
+    diffs = run_diff({'pages': [_KPI_PAGE_NO_TITLE_A]}, {'pages': [_KPI_PAGE_NO_TITLE_B]})
+    assert len(diffs) == 1
+    assert diffs[0]['label'] == 'Pág 0 › X'
+
+
+def test_run_diff_page_fallback_label_translates_to_english():
+    diffs = run_diff({'pages': [_KPI_PAGE_NO_TITLE_A]}, {'pages': [_KPI_PAGE_NO_TITLE_B]}, lang='en')
+    assert len(diffs) == 1
+    assert diffs[0]['label'] == 'Page 0 › X'
