@@ -37,7 +37,6 @@ STRINGS: dict[str, dict[str, str]] = {
     "ui.tab_repo": {"es": "Repositorio", "en": "Repository"},
 
     # ── app.py: Tab 1 — Validación ────────────────────────────────────────
-    "ui.pdf_coming_soon": {"es": "📄 3. PDF — próximamente", "en": "📄 3. PDF — coming soon"},
     "ui.client_optional": {"es": "👤 Cliente (opcional)", "en": "👤 Client (optional)"},
     "ui.none_option": {"es": "— ninguno —", "en": "— none —"},
     "ui.caption_compare_prev": {"es": "Para comparar con periodo anterior", "en": "To compare with the previous period"},

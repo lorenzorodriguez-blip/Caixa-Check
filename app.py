@@ -127,14 +127,12 @@ tab_validate, tab_diff, tab_repo = st.tabs([t('ui.tab_validate', lang), t('ui.ta
 with tab_validate:
     none_label = t('ui.none_option', lang)
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
     with col1:
         csv_file = st.file_uploader('📊 1. CSV Input', type=['csv'], key='csv')
     with col2:
         json_file = st.file_uploader('{ } 2. JSON', type=['json'], key='json')
     with col3:
-        st.info(t('ui.pdf_coming_soon', lang))
-    with col4:
         val_client = st.selectbox(
             t('ui.client_optional', lang),
             [none_label] + load_clients(),
