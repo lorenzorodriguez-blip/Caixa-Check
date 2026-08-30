@@ -1,3 +1,6 @@
+from .i18n import t
+
+
 def extract_metrics(data: dict) -> dict:
     pages = data.get('pages', [])
     metrics: dict = {}
@@ -39,17 +42,17 @@ def extract_metrics(data: dict) -> dict:
     return metrics
 
 
-def run_diff(data_a: dict, data_b: dict) -> list:
+def run_diff(data_a: dict, data_b: dict, lang: str = 'es') -> list:
     m_a = extract_metrics(data_a)
     m_b = extract_metrics(data_b)
 
     date_a = (((data_a.get('pages') or [{}])[3:4] or [{}])[0]
                .get('widgets', [{}])[0:1] or [{}])[0]
-    date_a = ((date_a.get('content') or [{}])[0:1] or [{}])[0].get('date', 'Periodo A')
+    date_a = ((date_a.get('content') or [{}])[0:1] or [{}])[0].get('date', t('diff.period_a', lang))
 
     date_b = (((data_b.get('pages') or [{}])[3:4] or [{}])[0]
                .get('widgets', [{}])[0:1] or [{}])[0]
-    date_b = ((date_b.get('content') or [{}])[0:1] or [{}])[0].get('date', 'Periodo B')
+    date_b = ((date_b.get('content') or [{}])[0:1] or [{}])[0].get('date', t('diff.period_b', lang))
 
     diffs = []
     for k in set(m_a) | set(m_b):

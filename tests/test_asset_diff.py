@@ -1,5 +1,23 @@
 import pytest
 from src.diff import extract_assets, run_asset_diff
+from src.diff import run_diff
+
+_KPI_PAGE_A = {'layout': {'title': 'Pg'}, 'widgets': [{'name': 'kpi_box', 'title': 'X', 'content': [{'data': 100.0}]}]}
+_KPI_PAGE_B = {'layout': {'title': 'Pg'}, 'widgets': [{'name': 'kpi_box', 'title': 'X', 'content': [{'data': 150.0}]}]}
+
+
+def test_run_diff_period_labels_default_to_spanish():
+    diffs = run_diff({'pages': [_KPI_PAGE_A]}, {'pages': [_KPI_PAGE_B]})
+    assert len(diffs) == 1
+    assert diffs[0]['date_a'] == 'Periodo A'
+    assert diffs[0]['date_b'] == 'Periodo B'
+
+
+def test_run_diff_period_labels_translate_to_english():
+    diffs = run_diff({'pages': [_KPI_PAGE_A]}, {'pages': [_KPI_PAGE_B]}, lang='en')
+    assert len(diffs) == 1
+    assert diffs[0]['date_a'] == 'Period A'
+    assert diffs[0]['date_b'] == 'Period B'
 
 
 def _row(name, isin, mv):
