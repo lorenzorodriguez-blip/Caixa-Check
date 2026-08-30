@@ -318,34 +318,34 @@ with tab_diff:
         _render_diff_summary(diffs, date_a, date_b, lang)
         _render_asset_diff(st.session_state.get('asset_diffs', []), date_a, date_b, lang)
 
-# ── Tab 3: Repositorio ───────────────────────────────────────────────────────
+# ── Tab 3: Repositorio / Repository ───────────────────────────────────────────
 with tab_repo:
-    # Añadir nuevo cliente
-    with st.expander('+ Añadir nuevo cliente'):
-        new_client_id = st.text_input('ID del cliente (UUID)', key='new_client_id')
-        if st.button('Añadir cliente', key='btn_add_client'):
+    # Añadir nuevo cliente / Add new client
+    with st.expander(tr('ui.add_client_expander')):
+        new_client_id = st.text_input(tr('ui.client_id_label'), key='new_client_id')
+        if st.button(tr('ui.add_client_btn'), key='btn_add_client'):
             if new_client_id.strip():
                 added = add_client(new_client_id.strip())
                 if added:
-                    st.success(f'Cliente añadido: {new_client_id.strip()}')
+                    st.success(tr('ui.client_added', id=new_client_id.strip()))
                     st.rerun()
                 else:
-                    st.warning('Ese cliente ya existe.')
+                    st.warning(tr('ui.client_exists'))
             else:
-                st.error('Introduce un ID válido.')
+                st.error(tr('ui.invalid_id'))
 
-    st.subheader('Guardar reporte')
+    st.subheader(tr('ui.save_report_subheader'))
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        repo_json_file = st.file_uploader('JSON del reporte', type=['json'], key='repo_json')
+        repo_json_file = st.file_uploader(tr('ui.report_json_label'), type=['json'], key='repo_json')
     with col2:
-        repo_excel_file = st.file_uploader('Excel (opcional)', type=['xlsx'], key='repo_excel')
+        repo_excel_file = st.file_uploader(tr('ui.excel_optional_label'), type=['xlsx'], key='repo_excel')
     with col3:
-        repo_client = st.selectbox('Cliente', load_clients(), key='repo_client')
+        repo_client = st.selectbox(tr('ui.client_label'), load_clients(), key='repo_client')
     with col4:
-        repo_date = st.date_input('Fecha del reporte', value=date.today(), key='repo_date')
+        repo_date = st.date_input(tr('ui.report_date_label'), value=date.today(), key='repo_date')
 
-    save_clicked = st.button('💾 Guardar reporte', disabled=not repo_json_file, type='primary')
+    save_clicked = st.button(tr('ui.save_report_btn'), disabled=not repo_json_file, type='primary')
 
     if save_clicked and repo_json_file:
         try:
@@ -353,77 +353,79 @@ with tab_repo:
             excel_bytes = repo_excel_file.read() if repo_excel_file else None
             save_report(repo_client, repo_date, repo_json_data, excel_bytes)
             label = 'JSON + Excel' if excel_bytes else 'JSON'
-            st.success(f'Reporte guardado ({label}) — {repo_client} / {repo_date}')
+            st.success(tr('ui.report_saved', label=label, client=repo_client, date=repo_date))
 
             prev = get_previous_report(repo_client, repo_date)
             if prev:
                 prev_date, prev_data = prev
-                repo_diffs = run_diff(prev_data, repo_json_data)
+                repo_diffs = run_diff(prev_data, repo_json_data, lang=lang)
                 st.session_state['repo_diffs'] = repo_diffs
                 st.session_state['repo_diff_dates'] = (str(prev_date), str(repo_date))
                 st.session_state['repo_asset_diffs'] = run_asset_diff(prev_data, repo_json_data)
             else:
                 st.session_state.pop('repo_diffs', None)
-                st.info('No hay reporte anterior guardado para este cliente. La comparación estará disponible la próxima semana.')
+                st.info(tr('ui.no_prev_report_info'))
         except Exception as e:
-            st.error(f'Error al guardar: {e}')
+            st.error(tr('ui.error_saving', error=e))
 
     if 'repo_diffs' in st.session_state:
         date_a, date_b = st.session_state['repo_diff_dates']
         st.divider()
-        st.subheader(f'Comparación: {date_a} vs {date_b}')
-        _render_diff_summary(st.session_state['repo_diffs'], date_a, date_b)
-        _render_asset_diff(st.session_state.get('repo_asset_diffs', []), date_a, date_b)
+        st.subheader(tr('ui.comparison_header', a=date_a, b=date_b))
+        _render_diff_summary(st.session_state['repo_diffs'], date_a, date_b, lang)
+        _render_asset_diff(st.session_state.get('repo_asset_diffs', []), date_a, date_b, lang)
 
     st.divider()
-    st.subheader('Historial de reportes')
+    st.subheader(tr('ui.report_history_subheader'))
     all_reports = list_all_reports()
     if all_reports:
-        st.dataframe(pd.DataFrame(all_reports), use_container_width=True, hide_index=True)
+        history_df = pd.DataFrame(all_reports).rename(columns={
+            'cliente': tr('ui.col_client'),
+            'fecha': tr('ui.col_date'),
+            'excel': tr('ui.col_excel'),
+        })
+        st.dataframe(history_df, use_container_width=True, hide_index=True)
     else:
-        st.info('No hay reportes guardados aún.')
+        st.info(tr('ui.no_reports_yet'))
 
     st.divider()
-    st.subheader('Eliminar reporte')
+    st.subheader(tr('ui.delete_report_subheader'))
     if st.session_state.get('del_success'):
         st.success(st.session_state.pop('del_success'))
     if not all_reports:
-        st.info('No hay reportes guardados aún.')
+        st.info(tr('ui.no_reports_yet'))
     else:
         del_col1, del_col2 = st.columns(2)
         with del_col1:
             del_client = st.selectbox(
-                'Cliente', load_clients(), key='del_client',
+                tr('ui.client_label'), load_clients(), key='del_client',
                 on_change=lambda: st.session_state.pop('del_confirm', None),
             )
         del_dates = list_reports(del_client)
         with del_col2:
             if del_dates:
                 del_date = st.selectbox(
-                    'Fecha',
+                    tr('ui.date_label'),
                     options=list(reversed(del_dates)),
                     format_func=lambda d: d.strftime('%Y-%m-%d'),
                     key='del_date',
                 )
             else:
                 del_date = None
-                st.caption('Sin reportes para este cliente')
+                st.caption(tr('ui.no_reports_for_client'))
 
-        if st.button('🗑 Eliminar reporte', disabled=del_date is None,
+        if st.button(tr('ui.delete_report_btn'), disabled=del_date is None,
                      type='secondary', key='btn_del'):
             st.session_state['del_confirm'] = True
 
         if st.session_state.get('del_confirm') and del_date is not None:
-            st.warning(
-                f'¿Seguro? Se eliminarán el JSON y el Excel (si existe) de '
-                f'**{del_client}** / **{del_date}**. Esta acción no se puede deshacer.'
-            )
-            if st.button('Confirmar eliminación', type='primary', key='btn_del_confirm'):
+            st.warning(tr('ui.delete_confirm_warning', client=del_client, date=del_date))
+            if st.button(tr('ui.confirm_delete_btn'), type='primary', key='btn_del_confirm'):
                 try:
                     delete_report(del_client, del_date)
                     st.session_state.pop('del_confirm', None)
-                    st.session_state['del_success'] = f'Reporte eliminado — {del_client} / {del_date}'
+                    st.session_state['del_success'] = tr('ui.report_deleted', client=del_client, date=del_date)
                     st.rerun()
                 except Exception as e:
                     st.session_state.pop('del_confirm', None)
-                    st.error(f'Error al eliminar: {e}')
+                    st.error(tr('ui.error_saving', error=e))
