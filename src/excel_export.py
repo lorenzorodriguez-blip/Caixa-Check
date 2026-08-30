@@ -67,8 +67,8 @@ def build_excel(df_csv, json_data: dict) -> bytes:
     all_records, fondos_records = build_market_data_sheets(df_csv)
 
     for sheet_name, records, columns in [
-        ('look-through', all_records, MD_COLUMNS),
-        ('Fondos', fondos_records, FONDOS_MD_COLUMNS),
+        ('Look-Through %', all_records, MD_COLUMNS),
+        ('Funds Allocation', fondos_records, FONDOS_MD_COLUMNS),
     ]:
         ws = wb.create_sheet(sheet_name)
         ws.append(columns)
