@@ -115,27 +115,29 @@ def _render_asset_diff(asset_diffs: list, date_a: str, date_b: str, lang: str) -
             st.dataframe(styled, use_container_width=True, hide_index=True)
 
 
-tab_validate, tab_diff, tab_repo = st.tabs(['Validación', 'Comparar periodos', 'Repositorio'])
+tab_validate, tab_diff, tab_repo = st.tabs([t('ui.tab_validate', lang), t('ui.tab_diff', lang), t('ui.tab_repo', lang)])
 
-# ── Tab 1: Validación ────────────────────────────────────────────────────────
+# ── Tab 1: Validación / Validation ────────────────────────────────────────────
 with tab_validate:
+    none_label = t('ui.none_option', lang)
+
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         csv_file = st.file_uploader('📊 1. CSV Input', type=['csv'], key='csv')
     with col2:
         json_file = st.file_uploader('{ } 2. JSON', type=['json'], key='json')
     with col3:
-        st.info('📄 3. PDF — próximamente')
+        st.info(t('ui.pdf_coming_soon', lang))
     with col4:
         val_client = st.selectbox(
-            '👤 Cliente (opcional)',
-            ['— ninguno —'] + load_clients(),
+            t('ui.client_optional', lang),
+            [none_label] + load_clients(),
             key='val_client',
         )
-        st.caption('Para comparar con periodo anterior')
+        st.caption(t('ui.caption_compare_prev', lang))
 
     run_disabled = not (csv_file and json_file)
-    run_clicked = st.button('▶ Ejecutar validación', disabled=run_disabled, type='primary')
+    run_clicked = st.button(t('ui.run_validation_btn', lang), disabled=run_disabled, type='primary')
 
     if run_clicked:
         try:
@@ -149,7 +151,7 @@ with tab_validate:
             st.session_state['df'] = df
             st.session_state['json_data'] = json_data
         except Exception as e:
-            st.error(f'Error al procesar: {e}')
+            st.error(t('ui.error_processing', lang, error=e))
 
     if 'checks' in st.session_state:
         checks = st.session_state['checks']
@@ -159,16 +161,18 @@ with tab_validate:
         n_warn  = sum(1 for c in checks if c['status'] == 'warn')
 
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric('Total checks', n_total)
+        m1.metric(t('ui.total_checks', lang), n_total)
         m2.metric('✓ OK', n_pass)
-        m3.metric('✗ Errores', n_fail, delta=f'-{n_fail}' if n_fail else None, delta_color='inverse')
-        m4.metric('⚠ Advertencias', n_warn)
+        m3.metric(t('ui.errors_metric', lang), n_fail, delta=f'-{n_fail}' if n_fail else None, delta_color='inverse')
+        m4.metric(t('ui.warnings_metric', lang), n_warn)
 
-        filter_opt = st.radio('Filtrar:', ['Todos', 'Errores', 'Advertencias', 'OK'],
+        filter_all, filter_errors, filter_warnings = (
+            t('ui.filter_all', lang), t('ui.filter_errors', lang), t('ui.filter_warnings', lang))
+        filter_opt = st.radio(t('ui.filter_label', lang), [filter_all, filter_errors, filter_warnings, 'OK'],
                               horizontal=True, key='filter_validate')
 
         df_checks = pd.DataFrame(checks)
-        filter_map = {'Errores': 'fail', 'Advertencias': 'warn', 'OK': 'pass'}
+        filter_map = {filter_errors: 'fail', filter_warnings: 'warn', 'OK': 'pass'}
         if filter_opt in filter_map:
             df_checks = df_checks[df_checks['status'] == filter_map[filter_opt]]
 
@@ -200,30 +204,30 @@ with tab_validate:
                     st.markdown('\n'.join(f'- {item}' for item in items))
 
         # ── Comparación con periodo anterior ────────────────────────────────
-        if val_client != '— ninguno —':
+        if val_client != none_label:
             prev = get_previous_report(val_client, date.today())
             if prev:
                 prev_date, prev_data = prev
                 st.divider()
-                st.subheader('Comparar con periodo anterior')
-                st.caption(f'Periodo anterior encontrado: {prev_date}')
-                if st.button('▶ Comparar', key='btn_val_diff', type='primary'):
-                    val_diffs = run_diff(prev_data, st.session_state['json_data'])
+                st.subheader(t('ui.compare_prev_subheader', lang))
+                st.caption(t('ui.prev_period_found', lang, date=prev_date))
+                if st.button(t('ui.compare_btn', lang), key='btn_val_diff', type='primary'):
+                    val_diffs = run_diff(prev_data, st.session_state['json_data'], lang=lang)
                     st.session_state['val_diffs'] = val_diffs
                     st.session_state['val_diff_dates'] = (str(prev_date), str(date.today()))
                     st.session_state['val_asset_diffs'] = run_asset_diff(prev_data, st.session_state['json_data'])
 
         if 'val_diffs' in st.session_state:
             date_a, date_b = st.session_state['val_diff_dates']
-            _render_diff_summary(st.session_state['val_diffs'], date_a, date_b)
-            _render_asset_diff(st.session_state.get('val_asset_diffs', []), date_a, date_b)
+            _render_diff_summary(st.session_state['val_diffs'], date_a, date_b, lang)
+            _render_asset_diff(st.session_state.get('val_asset_diffs', []), date_a, date_b, lang)
 
         # Excel download
-        with st.spinner('Preparando Excel…'):
-            excel_bytes = build_excel(st.session_state['df'], st.session_state['json_data'])
+        with st.spinner(t('ui.preparing_excel', lang)):
+            excel_bytes = build_excel(st.session_state['df'], st.session_state['json_data'], lang=lang)
         filename = f"CaixaCheck_{date.today().strftime('%Y%m%d')}.xlsx"
         st.download_button(
-            '📥 Descargar Excel',
+            t('ui.download_excel_btn', lang),
             data=excel_bytes,
             file_name=filename,
             mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
