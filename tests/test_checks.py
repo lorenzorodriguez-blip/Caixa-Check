@@ -6,6 +6,7 @@ from src.checks import _parse_date
 from src.checks import _report_date
 from src.checks import _check_price_freshness
 from src.checks import _check_dist_rows
+from src.checks import _check_funds_missing_allocation
 from src.checks import run_checks
 from src.checks import chk
 
@@ -206,6 +207,95 @@ def test_price_freshness_check_shape():
     assert result['widget'] == 'Antigüedad de precios de activos'
     assert result['csv'] == '0 activos'
     assert result['json'] == '1 activo(s)'
+
+
+def _fund_row(isin='LU0001', desc='Fondo A', custodian='Bank X',
+              fmv=100000.0, exposures="{'allocation': {'fund': 100000.0}}",
+              acg='fund'):
+    return {
+        'isin': isin, 'asset_description': desc, 'custodian': custodian,
+        'final_market_value': fmv, 'exposures': exposures,
+        'asset_class_group': acg,
+    }
+
+
+def test_funds_missing_allocation_returns_empty_when_no_fund_rows():
+    calcs = {'active': pd.DataFrame([]), 'lt_alloc': {}}
+    assert _check_funds_missing_allocation(calcs) == []
+
+
+def test_funds_missing_allocation_ignores_non_fund_rows():
+    row = _fund_row(acg='bond')
+    calcs = {'active': pd.DataFrame([row]), 'lt_alloc': {'fund': 100000.0}}
+    assert _check_funds_missing_allocation(calcs) == []
+
+
+def test_funds_missing_allocation_ignores_a_real_breakdown():
+    row = _fund_row(exposures="{'allocation': {'equity': 0.5, 'fixed-income': 0.5}}")
+    calcs = {'active': pd.DataFrame([row]), 'lt_alloc': {'equity': 50000.0, 'fixed-income': 50000.0}}
+    assert _check_funds_missing_allocation(calcs) == []
+
+
+def test_funds_missing_allocation_flags_fund_only_allocation():
+    row = _fund_row()
+    calcs = {'active': pd.DataFrame([row]), 'lt_alloc': {'fund': 100000.0}}
+    result = _check_funds_missing_allocation(calcs)
+    assert len(result) == 2
+
+    primary = result[0]
+    assert primary['odt'] == 'CSV'
+    assert primary['group'] == 'CSV — Calidad datos'
+    assert primary['widget'] == 'Fondos sin datapoint de allocation'
+    assert primary['status'] == 'warn'
+    assert primary['json'] == '1 fondo(s)'
+    assert primary['detail'] == ['LU0001 | Fondo A | Bank X | 100.000 €']
+
+
+def test_funds_missing_allocation_flags_even_when_value_differs_from_fmv():
+    # key-only match: the fallback value doesn't have to equal final_market_value
+    row = _fund_row(fmv=100000.0, exposures="{'allocation': {'fund': 42.0}}")
+    calcs = {'active': pd.DataFrame([row]), 'lt_alloc': {'fund': 42.0}}
+    result = _check_funds_missing_allocation(calcs)
+    assert len(result) == 2
+    assert result[0]['status'] == 'warn'
+
+
+def test_funds_missing_allocation_cross_check_passes_when_totals_match():
+    row = _fund_row(fmv=100000.0)
+    calcs = {'active': pd.DataFrame([row]), 'lt_alloc': {'fund': 100000.0}}
+    _, cross_check = _check_funds_missing_allocation(calcs)
+    assert cross_check['status'] == 'pass'
+
+
+def test_funds_missing_allocation_cross_check_warns_on_mismatch():
+    # lt_alloc['fund'] is bigger than the flagged row alone -> some other row
+    # (e.g. allocation == {}) is also landing in the 'fund' bucket, uncaught.
+    row = _fund_row(fmv=100000.0)
+    calcs = {'active': pd.DataFrame([row]), 'lt_alloc': {'fund': 150000.0}}
+    _, cross_check = _check_funds_missing_allocation(calcs)
+    assert cross_check['status'] in ('warn', 'fail')
+
+
+def test_funds_missing_allocation_multiple_rows_all_listed():
+    rows = [
+        _fund_row(isin='LU0001', fmv=60000.0),
+        _fund_row(isin='LU0002', desc='Fondo B', fmv=40000.0),
+    ]
+    calcs = {'active': pd.DataFrame(rows), 'lt_alloc': {'fund': 100000.0}}
+    primary, cross_check = _check_funds_missing_allocation(calcs)
+    assert primary['json'] == '2 fondo(s)'
+    assert len(primary['detail']) == 2
+    assert cross_check['status'] == 'pass'
+
+
+def test_run_checks_includes_funds_missing_allocation():
+    row = _fund_row()
+    calcs = _minimal_calcs([row])
+    calcs['lt_alloc'] = {'fund': 100000.0}
+    jx = _minimal_jx('24/07/2026')
+    checks = run_checks(calcs, jx)
+    widgets = [c['widget'] for c in checks]
+    assert 'Fondos sin datapoint de allocation' in widgets
 
 
 def _minimal_jx(report_date_str):

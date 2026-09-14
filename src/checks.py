@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from .constants import TOL, PCT_TOL
+from .parser import safe_parse
 
 
 def _parse_date(s):
@@ -165,6 +166,50 @@ def _check_price_freshness(calcs, report_date):
     }
 
 
+def _check_funds_missing_allocation(calcs: dict) -> list:
+    """Flag fund rows whose exposures.allocation has no real look-through
+    breakdown -- i.e. its only key is 'fund' (the data provider's fallback
+    when it has no equity/fixed-income/cash/other split for that fund).
+    Also cross-checks the flagged rows' total value against calcs['lt_alloc']'s
+    internal 'fund' bucket (where these same rows land during build_calcs) --
+    a mismatch means some other row also has an incomplete allocation that
+    this exact-match rule didn't catch (e.g. allocation == {} entirely)."""
+    flagged = []
+    for r in calcs['active'].to_dict('records'):
+        if str(r.get('asset_class_group', '') or '').strip().lower() != 'fund':
+            continue
+        exp = safe_parse(r.get('exposures', ''))
+        allocation = exp.get('allocation') or {}
+        if list(allocation.keys()) == ['fund']:
+            flagged.append(r)
+
+    if not flagged:
+        return []
+
+    detail = [
+        f"{r.get('isin', '—')} | {r.get('asset_description', '—')} | "
+        f"{r.get('custodian', '—')} | {fmt(float(r.get('final_market_value', 0) or 0))}"
+        for r in flagged
+    ]
+    primary = {
+        'odt': 'CSV', 'group': 'CSV — Calidad datos',
+        'widget': 'Fondos sin datapoint de allocation',
+        'rule': "allocation = {'fund': X} → falta datapoint de allocation",
+        'csv': '0 fondos', 'json': f'{len(flagged)} fondo(s)',
+        'status': 'warn', 'detail': detail,
+        'page_title': '', 'widget_id': '',
+    }
+
+    flagged_sum = sum(float(r.get('final_market_value', 0) or 0) for r in flagged)
+    fund_bucket_total = calcs['lt_alloc'].get('fund', 0.0)
+    cross_check = chk(
+        'CSV', 'CSV — Calidad datos', 'Fondos sin datapoint de allocation — cruce',
+        'Σ fondos sin allocation = bucket interno "fund" (calcs)',
+        flagged_sum, fund_bucket_total, 'abs',
+    )
+    return [primary, cross_check]
+
+
 def _kpi_val(d):
     if d is None:
         return None
@@ -222,6 +267,8 @@ def run_checks(calcs: dict, jx: dict) -> list:
                         'rule': 'MV > 0, tiene asset_class_group pero falta sub_asset_class',
                         'csv': '0 activos', 'json': f"{len(calcs['missing_sac'])} activo(s)",
                         'status': 'warn', 'detail': detail, 'page_title': '', 'widget_id': ''})
+
+    checks.extend(_check_funds_missing_allocation(calcs))
 
     report_date = _report_date(jx)
     if report_date:
