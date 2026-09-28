@@ -19,13 +19,14 @@ def test_fondos_md_columns_keeps_order_and_no_duplicates():
     assert len(FONDOS_MD_COLUMNS) == len(set(FONDOS_MD_COLUMNS))
 
 
-def test_fondos_allocation_columns_is_124_entries():
-    assert len(FONDOS_ALLOCATION_COLUMNS) == 124
+def test_fondos_allocation_columns_is_126_entries():
+    assert len(FONDOS_ALLOCATION_COLUMNS) == 126
 
 
 def test_fondos_allocation_columns_includes_expected_groups():
     for expected in ('Allocation_Equity', 'Currency_EUR', 'Rating Grade_AAA', 'Rating_AAA',
-                      'Sector_FI_Government', 'Sector_EQ_Technology', 'Sector_Technology',
+                      'Sector_FI_Government', 'Sector_FI_Swap', 'Sector_FI_Forward/Future',
+                      'Sector_EQ_Technology', 'Sector_Technology',
                       'Style_Large Growth', 'Maturity_1-3y', 'Region_EQ_UK', 'Region_FI_UK',
                       'Revenue VI_Eurozone'):
         assert expected in FONDOS_ALLOCATION_COLUMNS

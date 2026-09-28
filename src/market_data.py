@@ -117,6 +117,8 @@ def transform_row(row: dict) -> dict:
         'Sector_FI_Asset Backed': sec_fi('asset_backed'),
         'Sector_FI_Covered Bond': sec_fi('covered_bond'),
         'Sector_FI_Cash & Equiv.': sec_fi('cash_&_equivalents'),
+        'Sector_FI_Swap': sec_fi('swap'),
+        'Sector_FI_Forward/Future': sec_fi('forward_future'),
         'Sector_EQ_Technology': sec_eq('technology'),
         'Sector_EQ_Financial Services': sec_eq('financial_services'),
         'Sector_EQ_Healthcare': sec_eq('healthcare'),

@@ -48,6 +48,26 @@ def test_fondos_record_keeps_identity_fields_unchanged():
         assert fondos_rec[identity_col] == all_rec[identity_col]
 
 
+def test_sector_fi_swap_and_forward_future_are_captured():
+    # A hedge/derivative sub-position inside a bond fund's sector breakdown —
+    # previously silently dropped because no MD_COLUMNS entry existed for it.
+    df = pd.DataFrame([_row(
+        datapoints="{'sector_fixedincome_corporate_bond': 0.9, "
+                   "'sector_fixedincome_swap': -0.0176, "
+                   "'sector_fixedincome_forward_future': 0.0013}"
+    )])
+    all_records, fondos_records = build_market_data_sheets(df)
+
+    lt_rec = all_records[0]
+    assert lt_rec['Sector_FI_Swap'] == -1.76
+    assert lt_rec['Sector_FI_Forward/Future'] == 0.13
+
+    fondos_rec = fondos_records[0]
+    # -1.76% * 100000 / 100 = -1760.0
+    assert fondos_rec['Sector_FI_Swap'] == -1760.0
+    assert fondos_rec['Sector_FI_Forward/Future'] == 130.0
+
+
 def test_fondos_record_drops_ratio_columns():
     df = pd.DataFrame([_row(datapoints="{'alpha': 0.05, 'beta': 1.1, 'ter': 0.012}")])
     _, fondos_records = build_market_data_sheets(df)

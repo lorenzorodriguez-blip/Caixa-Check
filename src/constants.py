@@ -77,6 +77,7 @@ MD_COLUMNS = [
     'Rating_B', 'Rating_Below B', 'Rating_NR', 'Rating_Others',
     'Sector_FI_Corporate Bond', 'Sector_FI_Government', 'Sector_FI_Gov. Related',
     'Sector_FI_Asset Backed', 'Sector_FI_Covered Bond', 'Sector_FI_Cash & Equiv.',
+    'Sector_FI_Swap', 'Sector_FI_Forward/Future',
     'Sector_EQ_Technology', 'Sector_EQ_Financial Services', 'Sector_EQ_Healthcare',
     'Sector_EQ_Industrials', 'Sector_EQ_Consumer Cyclical', 'Sector_EQ_Consumer Defensive',
     'Sector_EQ_Communication Services', 'Sector_EQ_Energy', 'Sector_EQ_Basic Materials',
