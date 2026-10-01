@@ -18,7 +18,8 @@ Thumbs.db
 docs/superpowers/
 
 # Claude Code project settings
-.claude/
+.claude/*
+!.claude/agents/
 
 # Test data (no subir datos reales de clientes)
 data/
