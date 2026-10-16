@@ -28,6 +28,26 @@ STALE_PRICE_RE = re.compile(
     r'(?P<days>\d+) día\(s\) \[(?P<tag>\w+)\]$'
 )
 
+FI_RATING_WIDGET = 'Renta fija sin calificación crediticia'
+FUNDS_ALLOC_WIDGET = 'Fondos sin datapoint de allocation'
+# "isin | description | custodian | mv" -- shared by both of the widgets above.
+SIMPLE_DETAIL_RE = re.compile(
+    r'^(?P<isin>\S+) \| (?P<asset>.*?) \| (?P<custodian>.*?) \| (?P<mv>.*)$'
+)
+
+# These three widgets all mean "incomplete asset_class_group/sub_asset_class
+# classification" at different degrees (both missing, or just one) -- grouped
+# into a single cross-client list since they're one data-quality story.
+CLASSIFICATION_WIDGETS = (
+    'Activos sin asset_class ni sub_asset_class',
+    'Activos sin asset_class_group',
+    'Activos sin sub_asset_class',
+)
+CLASSIFICATION_RE = re.compile(
+    r'^(?P<asset>.*?) \| ISIN: (?P<isin>\S+) \| (?P<custodian>.*?) \| MV: (?P<mv>.*?) \| '
+    r'asset_class: "(?P<asset_class>.*?)" \| sub_asset: "(?P<sub_asset>.*?)"$'
+)
+
 
 def _parse_stale_prices(checks: list) -> list:
     rows = []
@@ -49,6 +69,48 @@ def _parse_stale_prices(checks: list) -> list:
     return rows
 
 
+def _parse_simple_detail_list(checks: list, widget: str) -> list:
+    rows = []
+    for c in checks:
+        if c['widget'] != widget:
+            continue
+        for line in c['detail']:
+            m = SIMPLE_DETAIL_RE.match(line)
+            if not m:
+                rows.append({'raw': line})
+                continue
+            rows.append({
+                'isin': m['isin'],
+                'asset_description': m['asset'],
+                'custodian': m['custodian'],
+                'market_value': m['mv'],
+            })
+    return rows
+
+
+def _parse_classification_issues(checks: list) -> list:
+    rows = []
+    for c in checks:
+        if c['widget'] not in CLASSIFICATION_WIDGETS:
+            continue
+        for line in c['detail']:
+            m = CLASSIFICATION_RE.match(line)
+            if not m:
+                rows.append({'raw': line, 'issue': c['widget']})
+                continue
+            rows.append({
+                'isin': m['isin'],
+                'asset_description': m['asset'],
+                'custodian': m['custodian'],
+                'market_value': m['mv'],
+                'asset_class_group': m['asset_class'],
+                'sub_asset_class': m['sub_asset'],
+                'issue': c['widget'],
+                'severity': c['status'],
+            })
+    return rows
+
+
 def check_client(csv_path: Path, json_path: Path) -> dict:
     df = parse_csv(csv_path.read_text(encoding='utf-8'))
     calcs = build_calcs(df)
@@ -66,6 +128,9 @@ def check_client(csv_path: Path, json_path: Path) -> dict:
         'fail': n_fail,
         'issues': [c for c in checks if c['status'] in ('fail', 'warn')],
         'stale_prices': _parse_stale_prices(checks),
+        'fi_missing_rating': _parse_simple_detail_list(checks, FI_RATING_WIDGET),
+        'funds_missing_allocation': _parse_simple_detail_list(checks, FUNDS_ALLOC_WIDGET),
+        'classification_issues': _parse_classification_issues(checks),
     }
 
 
@@ -89,16 +154,20 @@ def main() -> None:
         if r.get('fail', 0) > 0 or 'error' in r
     ]
 
-    stale_prices_all = [
-        {**row, 'client': name}
-        for name, r in results.items()
-        for row in r.get('stale_prices', [])
-    ]
+    def _flatten(key):
+        return [
+            {**row, 'client': name}
+            for name, r in results.items()
+            for row in r.get(key, [])
+        ]
 
     print(json.dumps({
         'clients': results,
         'clients_with_problems': problems,
-        'stale_prices_all': stale_prices_all,
+        'stale_prices_all': _flatten('stale_prices'),
+        'fi_missing_rating_all': _flatten('fi_missing_rating'),
+        'funds_missing_allocation_all': _flatten('funds_missing_allocation'),
+        'classification_issues_all': _flatten('classification_issues'),
     }, indent=2, ensure_ascii=False))
 
 
