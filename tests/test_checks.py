@@ -291,11 +291,11 @@ def test_funds_missing_allocation_multiple_rows_all_listed():
 
 
 def _fi_row(isin='LU0001', desc='Bono A', custodian='Bank X', fmv=50000.0,
-            acg='fixed-income', sac='bond', datapoints='{}'):
+            acg='fixed-income', sac='bond', credit_rating=''):
     return {
         'isin': isin, 'asset_description': desc, 'custodian': custodian,
         'final_market_value': fmv, 'asset_class_group': acg,
-        'sub_asset_class': sac, 'datapoints': datapoints,
+        'sub_asset_class': sac, 'credit_rating': credit_rating,
     }
 
 
@@ -305,13 +305,13 @@ def test_fi_missing_rating_returns_none_when_no_fi_rows():
 
 
 def test_fi_missing_rating_ignores_fi_row_with_real_rating():
-    row = _fi_row(datapoints="{'credit_rating_aaa': 0.5}")
+    row = _fi_row(credit_rating='bbb')
     calcs = {'active': pd.DataFrame([row])}
     assert _check_fi_missing_rating(calcs) is None
 
 
-def test_fi_missing_rating_flags_bond_with_no_rating_datapoints():
-    row = _fi_row(sac='bond', datapoints='{}')
+def test_fi_missing_rating_flags_bond_with_blank_credit_rating():
+    row = _fi_row(sac='bond', credit_rating='')
     calcs = {'active': pd.DataFrame([row])}
     result = _check_fi_missing_rating(calcs)
     assert result is not None
@@ -319,8 +319,8 @@ def test_fi_missing_rating_flags_bond_with_no_rating_datapoints():
     assert result['json'] == '1 activo(s)'
 
 
-def test_fi_missing_rating_flags_money_market_with_no_rating_datapoints():
-    row = _fi_row(sac='money-market', datapoints='{}')
+def test_fi_missing_rating_flags_money_market_with_blank_credit_rating():
+    row = _fi_row(sac='money-market', credit_rating='')
     calcs = {'active': pd.DataFrame([row])}
     result = _check_fi_missing_rating(calcs)
     assert result is not None
@@ -328,33 +328,33 @@ def test_fi_missing_rating_flags_money_market_with_no_rating_datapoints():
 
 
 def test_fi_missing_rating_ignores_other_fi_sub_asset_classes():
-    row = _fi_row(sac='convertible-bond', datapoints='{}')
+    row = _fi_row(sac='convertible-bond', credit_rating='')
     calcs = {'active': pd.DataFrame([row])}
     assert _check_fi_missing_rating(calcs) is None
 
 
 def test_fi_missing_rating_ignores_non_fi_assets():
-    row = _fi_row(acg='equity', sac='bond', datapoints='{}')
+    row = _fi_row(acg='equity', sac='bond', credit_rating='')
     calcs = {'active': pd.DataFrame([row])}
     assert _check_fi_missing_rating(calcs) is None
 
 
 def test_fi_missing_rating_handles_underscore_spelling():
-    row = _fi_row(acg='fixed_income', sac='bond', datapoints='{}')
+    row = _fi_row(acg='fixed_income', sac='bond', credit_rating='')
     calcs = {'active': pd.DataFrame([row])}
     assert _check_fi_missing_rating(calcs) is not None
 
 
-def test_fi_missing_rating_treats_all_zero_ratings_as_missing():
-    row = _fi_row(datapoints="{'credit_rating_aaa': 0, 'credit_rating_bbb': 0}")
+def test_fi_missing_rating_treats_whitespace_only_as_blank():
+    row = _fi_row(credit_rating='   ')
     calcs = {'active': pd.DataFrame([row])}
     assert _check_fi_missing_rating(calcs) is not None
 
 
 def test_fi_missing_rating_multiple_rows_all_listed():
     rows = [
-        _fi_row(isin='LU0001', desc='Bono A', datapoints='{}'),
-        _fi_row(isin='LU0002', desc='Bono B', sac='money-market', datapoints='{}'),
+        _fi_row(isin='LU0001', desc='Bono A', credit_rating=''),
+        _fi_row(isin='LU0002', desc='Bono B', sac='money-market', credit_rating=''),
     ]
     calcs = {'active': pd.DataFrame(rows)}
     result = _check_fi_missing_rating(calcs)
@@ -363,7 +363,7 @@ def test_fi_missing_rating_multiple_rows_all_listed():
 
 
 def test_fi_missing_rating_check_shape():
-    row = _fi_row(datapoints='{}')
+    row = _fi_row(credit_rating='')
     calcs = {'active': pd.DataFrame([row])}
     result = _check_fi_missing_rating(calcs)
     assert result['odt'] == 'CSV'
@@ -372,7 +372,7 @@ def test_fi_missing_rating_check_shape():
 
 
 def test_run_checks_includes_fi_missing_rating():
-    row = _fi_row(datapoints='{}')
+    row = _fi_row(credit_rating='')
     calcs = _minimal_calcs([row])
     jx = _minimal_jx('24/07/2026')
     checks = run_checks(calcs, jx)

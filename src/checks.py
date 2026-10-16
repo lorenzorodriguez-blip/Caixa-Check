@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from .constants import TOL, PCT_TOL
-from .market_data import _get_highest_rating
 from .parser import safe_parse
 
 
@@ -212,9 +211,9 @@ def _check_funds_missing_allocation(calcs: dict) -> list:
 
 
 def _check_fi_missing_rating(calcs: dict):
-    """Flag fixed-income bonds/money-market assets with no credit rating
-    data points -- datapoints has zero credit_rating_* fields (or they're
-    all <= 0), same definition _get_highest_rating uses for 'No data'."""
+    """Flag fixed-income bonds/money-market assets with a blank credit_rating
+    column in the CSV (the raw column, visible as-is in the 'Datos CSV'
+    sheet -- not the datapoints/exposures JSON blobs)."""
     flagged = []
     for r in calcs['active'].to_dict('records'):
         acg = str(r.get('asset_class_group', '') or '').strip().lower()
@@ -223,8 +222,7 @@ def _check_fi_missing_rating(calcs: dict):
         sac = str(r.get('sub_asset_class', '') or '').strip().lower()
         if sac not in ('bond', 'money-market'):
             continue
-        dp = safe_parse(r.get('datapoints', ''))
-        if _get_highest_rating(dp) != 'No data':
+        if str(r.get('credit_rating', '') or '').strip():
             continue
         flagged.append(r)
 
@@ -239,7 +237,7 @@ def _check_fi_missing_rating(calcs: dict):
     return {
         'odt': 'CSV', 'group': 'CSV — Calidad datos',
         'widget': 'Renta fija sin calificación crediticia',
-        'rule': 'bond/money-market sin credit_rating_* en datapoints',
+        'rule': 'bond/money-market con columna credit_rating vacía',
         'csv': '0 activos', 'json': f'{len(flagged)} activo(s)',
         'status': 'warn', 'detail': detail,
         'page_title': '', 'widget_id': '',
