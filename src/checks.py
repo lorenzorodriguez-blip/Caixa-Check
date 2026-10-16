@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from .constants import TOL, PCT_TOL
+from .market_data import _get_highest_rating
 from .parser import safe_parse
 
 
@@ -210,6 +211,59 @@ def _check_funds_missing_allocation(calcs: dict) -> list:
     return [primary, cross_check]
 
 
+def _check_fi_missing_rating(calcs: dict):
+    """Flag fixed-income bonds/money-market assets with no credit rating
+    data points -- datapoints has zero credit_rating_* fields (or they're
+    all <= 0), same definition _get_highest_rating uses for 'No data'."""
+    flagged = []
+    for r in calcs['active'].to_dict('records'):
+        acg = str(r.get('asset_class_group', '') or '').strip().lower()
+        if acg not in ('fixed-income', 'fixed_income'):
+            continue
+        sac = str(r.get('sub_asset_class', '') or '').strip().lower()
+        if sac not in ('bond', 'money-market'):
+            continue
+        dp = safe_parse(r.get('datapoints', ''))
+        if _get_highest_rating(dp) != 'No data':
+            continue
+        flagged.append(r)
+
+    if not flagged:
+        return None
+
+    detail = [
+        f"{r.get('isin', '—')} | {r.get('asset_description', '—')} | "
+        f"{r.get('custodian', '—')} | {fmt(float(r.get('final_market_value', 0) or 0))}"
+        for r in flagged
+    ]
+    return {
+        'odt': 'CSV', 'group': 'CSV — Calidad datos',
+        'widget': 'Renta fija sin calificación crediticia',
+        'rule': 'bond/money-market sin credit_rating_* en datapoints',
+        'csv': '0 activos', 'json': f'{len(flagged)} activo(s)',
+        'status': 'warn', 'detail': detail,
+        'page_title': '', 'widget_id': '',
+    }
+
+
+def _check_empty_report(calcs: dict):
+    """Flag reports whose total portfolio value is effectively zero --
+    either no active assets at all, or assets that net to ~0 value."""
+    total = float(calcs.get('total', 0) or 0)
+    if abs(total) > TOL:
+        return None
+    return {
+        'odt': 'CSV', 'group': 'CSV — Calidad datos',
+        'widget': 'Informe sin activos',
+        'rule': 'Σ final_market_value del CSV = 0 €',
+        'csv': '> 0 €', 'json': fmt(total),
+        'status': 'warn',
+        'detail': ['El informe no tiene activos o su valoración total es 0 € — '
+                   'revisar si el CSV está vacío o incompleto.'],
+        'page_title': '', 'widget_id': '',
+    }
+
+
 def _kpi_val(d):
     if d is None:
         return None
@@ -238,6 +292,10 @@ def run_checks(calcs: dict, jx: dict) -> list:
                 f"sub_asset: \"{r.get('sub_asset_class', '')}\"")
 
     # ── CSV quality checks ──────────────────────────────────────────────────
+    empty_report_check = _check_empty_report(calcs)
+    if empty_report_check:
+        checks.append(empty_report_check)
+
     if len(calcs['unclassified']) > 0:
         detail = [fmt_row(r) for r in calcs['unclassified'].to_dict('records')]
         checks.append({'odt': 'CSV', 'group': 'CSV — Calidad datos',
@@ -269,6 +327,10 @@ def run_checks(calcs: dict, jx: dict) -> list:
                         'status': 'warn', 'detail': detail, 'page_title': '', 'widget_id': ''})
 
     checks.extend(_check_funds_missing_allocation(calcs))
+
+    fi_rating_check = _check_fi_missing_rating(calcs)
+    if fi_rating_check:
+        checks.append(fi_rating_check)
 
     report_date = _report_date(jx)
     if report_date:
