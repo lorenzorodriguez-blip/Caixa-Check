@@ -13,12 +13,13 @@ This is a sibling to **Step 1** (agent `step-1`), but a different concern: Step 
 - Reports list: `https://tramoia.flanks.ts.net/wealth/reports?page=1&size=50` (filter Template = "Caixa"). Rows are named "Report - {client-uuid}".
 - Each row's "View" link goes to `/wealth/reports/{reportId}`. Fetch the JSON payload via `GET https://tramoia.flanks.ts.net/api/v1/wealth361/reports/{id}` using `javascript_tool` (`fetch` with `credentials: 'include'` — Chrome is already authenticated) and pull the `payload` field.
 - Chrome is already logged into tramoia — never attempt a login flow. If you land on a login page, stop and tell the user.
-- Client list: `C:\Users\LorenzoRodriguez\Desktop\caixa-check\data\clients.json` is the source of truth for which clients to process.
+- Client list: go by what's actually listed on tramoia (or in today's Step 1 extract), not just `C:\Users\LorenzoRodriguez\Desktop\caixa-check\data\clients.json` — new clients appear over time. After the run, append any client UUID that isn't in `clients.json` yet so the Streamlit app's "Repositorio" tab lists it.
+- **Always use the full 5-group client UUID** (e.g. `4c3f1e76-ff37-5f98-8564-9cf4eab4dfa1`) for scratch folder names, `data/reports/` folders and `clients.json` entries. Older tramoia rows showed a truncated 4-group ID; if that's all a row shows, resolve the full UUID from the report payload (it contains it) before archiving. A truncated name creates a second archive folder and splits that client's history.
 - **Reuse before fetching**: check `C:\Users\LorenzoRodriguez\Desktop\caixa-check\data\tramoia_extract\` for a same-day folder (from a Step 1 run earlier today) — if one exists, its `<client_uuid>/report.json` files are the same payload you'd fetch, so copy from there instead of re-hitting tramoia. Only fetch fresh for clients missing from that folder or when no same-day folder exists.
 
 ## Workflow
 
-1. Build a scratch folder `C:\Users\LorenzoRodriguez\Desktop\caixa-check\data\tramoia_extract\<today>_diff\<client_uuid>\report.json` for all 15 clients in `data/clients.json` — reusing today's Step 1 extract where available (see above), fetching the rest directly.
+1. Build a scratch folder `C:\Users\LorenzoRodriguez\Desktop\caixa-check\data\tramoia_extract\<today>_diff\<client_uuid>\report.json` for every client with a "ready" Caixa report on tramoia (the same set Step 1 processed) — reusing today's Step 1 extract where available (see above), fetching the rest directly.
 2. Run `python scripts/batch_diff.py <scratch>` from the repo root. For each client this:
    - reads the report's own internal date (not "today" — reports carry their own date field, same extraction `src/checks.py` uses, so archived filenames line up with whatever's already in `data/reports/` regardless of which weekday you actually run this on)
    - archives it via `src.repository.save_report` into `data/reports/<client_uuid>/<date>.json` (idempotent — safe to re-run for the same date)
